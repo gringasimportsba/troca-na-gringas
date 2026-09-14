@@ -1,0 +1,14 @@
+GRINGAS TROCA 5.6
+
+Comece pelo arquivo GUIA_5_6.txt.
+
+Sem configurar o Supabase:
+- index.html e admin.html continuam funcionando localmente.
+
+Com o Supabase configurado:
+- banco online;
+- fotos privadas na nuvem;
+- login administrativo;
+- sincronização entre aparelhos.
+
+Não use os valores demonstrativos como tabela comercial real.

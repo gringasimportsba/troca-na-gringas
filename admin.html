@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gringas Troca — Painel Administrativo 5.6</title>
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="crown">♛</div><strong>GRINGAS</strong><span>TROCA</span></div>
+    <nav>
+      <button class="nav active" data-view="overview">⌂ <span>Visão geral</span></button>
+      <button class="nav" data-view="evaluations">▤ <span>Avaliações</span></button>
+      <button class="nav" data-view="clients">◉ <span>Clientes</span></button>
+      <button class="nav" data-view="prices">R$ <span>Aparelhos e preços</span></button>
+      <button class="nav" data-view="rules">⚙ <span>Regras de avaliação</span></button>
+      <button class="nav" data-view="upgrade">↗ <span>Produtos para upgrade</span></button>
+    </nav>
+    <div class="side-foot"><a href="index.html">← Abrir avaliação</a><small>Passo 5.6 • dados locais</small></div>
+  </aside>
+
+  <main>
+    <header>
+      <button id="menuBtn" class="menu">☰</button>
+      <div><h1 id="pageTitle">Boa noite, Railander. 👋</h1><p id="pageSub">Aqui está o resumo do Gringas Troca.</p></div>
+      <div class="admin-pill">GRINGAS IMPORTS <span>●</span></div>
+    </header>
+    <section id="content"></section>
+  </main>
+</div>
+
+<div class="drawer" id="drawer" aria-hidden="true">
+  <div class="drawer-card">
+    <button class="drawer-close" id="drawerClose">×</button>
+    <div id="drawerContent"></div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js"></script>
+<script src="cloud.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

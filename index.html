@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Gringas Troca — Passo 5.6 FINAL</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <button class="icon-btn hidden" id="backBtn" aria-label="Voltar">←</button>
+    <div class="brand"><span class="crown">♛</span><b>GRINGAS</b><small>TROCA</small></div>
+    <button class="text-btn" id="restartBtn">Reiniciar</button>
+  </header>
+
+  <main id="screen"></main>
+</div>
+
+<template id="welcome">
+<section class="screen welcome">
+  <div class="hero-copy"><span class="pill">GRINGAS TROCA</span><h1>Seu iPhone antigo vale mais do que você imagina.</h1><p>Descubra agora quanto ele pode valer na troca pelo seu próximo iPhone.</p></div>
+  <div class="phone-stage"><div class="phone p1"></div><div class="phone p2"></div><div class="phone p3"></div></div>
+  <button class="primary" data-next>AVALIAR MEU IPHONE <span>→</span></button>
+  <div class="trust"><span>◷ Avaliação em poucos minutos</span><span>✓ Sem compromisso</span><span>↻ Use como entrada na Gringas</span></div>
+  <p class="legal">Avaliação inicial. O valor final será confirmado após análise física do aparelho.</p>
+</section>
+</template>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="config.js?v=56.2"></script>
+<script src="cloud.js?v=56.2"></script>
+<script src="app.js?v=56.2"></script>
+</body>
+</html>
