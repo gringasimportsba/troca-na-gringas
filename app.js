@@ -9,11 +9,26 @@ const storageMap={
 'iPhone 17':['256 GB','512 GB'],'iPhone 17 Pro':['256 GB','512 GB','1 TB'],'iPhone 17 Pro Max':['256 GB','512 GB','1 TB']};
 
 // VALORES DEMONSTRATIVOS para testar o motor 5.2. Antes de uso público, substituir pelos valores reais da Gringas.
-const baseByModel={
-'iPhone 11':900,'iPhone 11 Pro':1150,'iPhone 11 Pro Max':1350,'iPhone 12':1250,'iPhone 12 Pro':1550,'iPhone 12 Pro Max':1800,
-'iPhone 13':1750,'iPhone 13 Pro':2200,'iPhone 13 Pro Max':2500,'iPhone 14':2250,'iPhone 14 Pro':2850,'iPhone 14 Pro Max':3250,
-'iPhone 15':2850,'iPhone 15 Pro':3650,'iPhone 15 Pro Max':4250,'iPhone 16':3500,'iPhone 16 Pro':4550,'iPhone 16 Pro Max':5350,
-'iPhone 17':4300,'iPhone 17 Pro':5700,'iPhone 17 Pro Max':6500};
+const defaultBaseByModel={
+'iPhone 11':900,'iPhone 11 Pro':1150,'iPhone 11 Pro Max':1350,
+'iPhone 12':1250,'iPhone 12 Pro':1550,'iPhone 12 Pro Max':1800,
+'iPhone 13':1750,'iPhone 13 Pro':2200,'iPhone 13 Pro Max':2500,
+'iPhone 14':2250,'iPhone 14 Pro':2850,'iPhone 14 Pro Max':3250,
+'iPhone 15':2800,'iPhone 15 Pro':3650,'iPhone 15 Pro Max':4250,
+'iPhone 16':3500,'iPhone 16 Pro':4550,'iPhone 16 Pro Max':5350,
+'iPhone 17':4300,'iPhone 17 Pro':5700,'iPhone 17 Pro Max':6500
+};
+
+const baseByModel=(()=>{
+  try{
+    const saved=JSON.parse(localStorage.getItem('gringasTrocaAdminPricesV55')||'null');
+    return saved && typeof saved==='object'
+      ? {...defaultBaseByModel,...saved}
+      : {...defaultBaseByModel};
+  }catch(e){
+    return {...defaultBaseByModel};
+  }
+})();
 const storageBonus={'64 GB':0,'128 GB':100,'256 GB':250,'512 GB':500,'1 TB':800};
 const conditionDiscount={'Excelente':0,'Bom':100,'Regular':300,'Danificado':0};
 const screenDiscount={'Sim, perfeitamente':0,'Possui riscos/manchas':180,'Está trincada':0,'Possui problema no touch':0,'Tela já foi substituída':220};
@@ -102,53 +117,106 @@ const HISTORY_KEY='gringasTrocaEvaluationsV55';
 function evaluationHistory(){
   try{return JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]')}catch(e){return []}
 }
-function persistEvaluation(calc){
-  const id=makeId();
-  const record={
-    id,
-    createdAt:new Date().toISOString(),
-    updatedAt:new Date().toISOString(),
-    status:'Nova',
-    customer:{name:state.name||'Cliente',phone:state.phone||'',service:state.service||'WhatsApp'},
-    device:{model:state.model,storage:state.storage,battery:state.battery,condition:state.condition,screen:state.screen,issues:[...state.issues],repair:state.repair,partAlert:state.partAlert},
-    warranty:{status:state.warranty,date:state.warrantyDate,appleCare:state.appleCare},
-    accessories:[...state.accessories],
-    notes:state.notes||'',
-    photos:{...state.photos},
-    calculation:{base:calc.base,totalDiscount:calc.totalDiscount,estimated:calc.estimated,isManual:calc.isManual,manual:[...calc.manual],lines:[...calc.lines]},
-    approvedValue:null,
-    adjustmentReason:'',
-    upgrade:null
-  };
-  const items=evaluationHistory();
-  const ix=items.findIndex(x=>x.id===id);
-  if(ix>=0){
-    // Keep operational fields that the admin may already have changed.
-    record.status=items[ix].status||record.status;
-    record.approvedValue=items[ix].approvedValue ?? null;
-    record.adjustmentReason=items[ix].adjustmentReason||'';
-    record.upgrade=items[ix].upgrade||null;
-    record.createdAt=items[ix].createdAt||record.createdAt;
-    items[ix]=record;
-  }else items.unshift(record);
-  try{
-    localStorage.setItem(HISTORY_KEY,JSON.stringify(items.slice(0,150)));
-  }catch(e){
-    // If photos overflow browser storage, keep the complete evaluation without image bytes.
-    record.photos={};
-    record.photoStorageWarning=true;
-    if(ix>=0)items[ix]=record; else items[0]=record;
-    try{localStorage.setItem(HISTORY_KEY,JSON.stringify(items.slice(0,150)))}catch(_){}
-  }
-  try{
-    if(window.GringasCloud?.configured){
-      window.GringasCloud.saveEvaluation(record).then(r=>{
-        if(r?.mode==='error') console.warn('Avaliação salva localmente, mas houve erro na nuvem.',r.error);
-      });
+async function persistEvaluation(calc){
+    const id=makeId();
+
+    const record={
+        id,
+        createdAt:new Date().toISOString(),
+        updatedAt:new Date().toISOString(),
+        status:'Nova',
+        customer:{
+            name:state.name||'Cliente',
+            phone:state.phone||'',
+            service:state.service||'WhatsApp'
+        },
+        device:{
+            model:state.model,
+            storage:state.storage,
+            battery:state.battery,
+            condition:state.condition,
+            screen:state.screen,
+            issues:[...state.issues],
+            repair:state.repair,
+            partAlert:state.partAlert
+        },
+        warranty:{
+            status:state.warranty,
+            date:state.warrantyDate,
+            appleCare:state.appleCare
+        },
+        accessories:[...state.accessories],
+        notes:state.notes||'',
+        photos:{...state.photos},
+        calculation:{
+            base:calc.base,
+            totalDiscount:calc.totalDiscount,
+            estimated:calc.estimated,
+            isManual:calc.isManual,
+            manual:[...calc.manual],
+            lines:[...calc.lines]
+        },
+        approvedValue:null,
+        adjustmentReason:'',
+        upgrade:null
+    };
+
+    const items=evaluationHistory();
+    const ix=items.findIndex(x=>x.id===id);
+
+    if(ix>=0){
+        record.status=items[ix].status||record.status;
+        record.approvedValue=items[ix].approvedValue ?? null;
+        record.adjustmentReason=items[ix].adjustmentReason||'';
+        record.upgrade=items[ix].upgrade||null;
+        record.createdAt=items[ix].createdAt||record.createdAt;
+        items[ix]=record;
+    }else{
+        items.unshift(record);
     }
-  }catch(e){console.warn('Nuvem indisponível; avaliação preservada localmente.',e)}
-  return record;
+
+    try{
+        if(window.GringasCloud?.configured){
+            const r=await window.GringasCloud.saveEvaluation(record);
+            if(r?.mode==='error'){
+                console.warn('Avaliação salva localmente, mas houve erro na nuvem.',r.error);
+            }
+        }
+    }catch(e){
+        console.warn('Nuvem indisponível; avaliação preservada localmente.',e);
+    }
+
+    try{
+        localStorage.setItem(
+            HISTORY_KEY,
+            JSON.stringify(items.slice(0,150))
+        );
+    }catch(e){
+        console.warn(
+            'localStorage cheio; mantendo avaliação sem bytes das fotos.',
+            e
+        );
+
+        record.photos={};
+        record.photoStorageWarning=true;
+
+        if(ix>=0){
+            items[ix]=record;
+        }else{
+            items[0]=record;
+        }
+
+        try{
+            localStorage.setItem(
+                HISTORY_KEY,
+                JSON.stringify(items.slice(0,150))
+            );
+        }catch(_){}
+    }
+
+    return record;
 }
+
 function updateEvaluationUpgrade(data){
   const items=evaluationHistory();
   const ix=items.findIndex(x=>x.id===data.code);
@@ -170,8 +238,8 @@ function updateEvaluationUpgrade(data){
   }catch(e){}
 }
 
-function reviewStep(){
-const c=calculate();const id=makeId();const record=persistEvaluation(c);const wa=window.open("about:blank","_blank");(async()=>{const p=record.photos||{};const front=p.front?await window.GringasCloud.signedPhotoUrl(p.front,86400):"";const back=p.back?await window.GringasCloud.signedPhotoUrl(p.back,86400):"";const msg=`🚨 *NOVA AVALIAÇÃO — GRINGAS TROCA*\n\n📋 *DADOS DO CLIENTE*\n👤 Cliente: ${record.customer?.name||"Não informado"}\n📱 Aparelho: ${record.device?.model||"Não informado"}\n💾 Armazenamento: ${record.device?.storage||"Não informado"}\n🔋 Bateria: ${record.device?.battery??"Não informado"}${record.device?.battery!=null?"%":""}\n\n💰 *AVALIAÇÃO*\n💵 Valor estimado: *${money(record.calculation?.estimated||0)}*\n\n📸 *FOTOS DO APARELHO*\n${front?"➡️ Frente: "+front:"➡️ Frente: não disponível"}\n${back?"➡️ Traseira: "+back:"➡️ Traseira: não disponível"}\n\n🆔 Código: *${record.id}*\n\n🔗 A avaliação já está disponível no painel *Gringas Troca*.`;const url="https://wa.me/5571999498939?text="+encodeURIComponent(msg);if(wa)wa.location.href=url;else window.location.href=url;})();back.classList.add("hidden");
+async function reviewStep(){
+const c=calculate();const id=makeId();const record=await persistEvaluation(c);const wa=window.open("about:blank","_blank");(async()=>{const p=record.photos||{};const front=p.front?await window.GringasCloud.signedPhotoUrl(p.front,86400):"";const back=p.back?await window.GringasCloud.signedPhotoUrl(p.back,86400):"";const msg=`🚨 *NOVA AVALIAÇÃO — TROCA NA GRINGAS*\n\n📋 *DADOS DO CLIENTE*\n👤 Cliente: ${record.customer?.name||"Não informado"}\n📱 Aparelho: ${record.device?.model||"Não informado"}\n💾 Armazenamento: ${record.device?.storage||"Não informado"}\n🔋 Bateria: ${record.device?.battery??"Não informado"}${record.device?.battery!=null?"%":""}\n\n💰 *AVALIAÇÃO*\n💵 Valor estimado: *${money(record.calculation?.estimated||0)}*\n\n📸 *FOTOS DO APARELHO*\n${front?"➡️ Frente: "+front:"➡️ Frente: não disponível"}\n${back?"➡️ Traseira: "+back:"➡️ Traseira: não disponível"}\n\n🆔 Código: *${record.id}*\n\n🔗 A avaliação já está disponível no painel *Gringas Troca*.`;const url="https://wa.me/5571999498939?text="+encodeURIComponent(msg);if(wa)wa.location.href=url;else window.location.href=url;})();back.classList.add("hidden");
  const photoCount=Object.keys(state.photos).length;
  const warrantyLine=state.warranty==='Sim'?`Sim${state.warrantyDate?' • até '+formatDateBR(state.warrantyDate):''}`:(state.warranty||'Não informado');
  const appleLine=state.warranty==='Sim'?(state.appleCare||'Não informado'):'—';
@@ -182,7 +250,7 @@ const c=calculate();const id=makeId();const record=persistEvaluation(c);const wa
  document.getElementById('edit').onclick=()=>{back.classList.remove('hidden');state.step=11;render()};document.getElementById('diagnostic').onclick=()=>diagnosticStep(c);document.getElementById('upgrade').onclick=()=>upgradeStep(c);
 }
 function diagnosticStep(c){screen.innerHTML=`<section class="screen"><span class="pill">DIAGNÓSTICO 5.6</span><h1 class="question" style="margin-top:18px">Como o sistema chegou ao valor.</h1><p class="sub">Esta tela é só para você validar o motor; o cliente final não precisa vê-la.</p><div class="calc-card"><div class="calc-row"><span>Valor-base demonstrativo</span><b>${money(c.base)}</b></div>${c.lines.length?c.lines.map(x=>`<div class="calc-row deduction"><span>${esc(x.label)}</span><b>− ${money(x.amount)}</b></div>`).join(''):`<div class="calc-row"><span>Descontos automáticos</span><b>R$ 0</b></div>`}<div class="calc-row total"><span>Estimativa</span><b>${money(c.estimated)}</b></div></div>${c.isManual?`<div class="manual-reasons"><b>Encaminhado para análise manual porque:</b>${c.manual.map(r=>`<span>• ${esc(r)}</span>`).join('')}</div>`:`<div class="success-note">✓ Nenhuma regra de análise manual foi acionada.</div>`}<div class="footer-actions"><button class="primary" id="backResult">VOLTAR AO RESULTADO →</button></div></section>`;document.getElementById('backResult').onclick=reviewStep}
-function upgradeStep(){showUpgrade(getResultRoot());}
+function upgradeStep(){window.showUpgrade(getResultRoot());}
 render();
 
 
@@ -342,9 +410,53 @@ render();
     c.querySelector('.v54-whatsapp').onclick=()=>{
       const msg=`Olá, Gringas! Fiz uma avaliação no Gringas Troca. Código: ${code}. Meu aparelho teve crédito estimado de ${money(trade)}. Tenho interesse em ${p?.name||'um novo iPhone'} ${p?.storage||''}${diff!==null?` e a diferença estimada ficou em ${money(diff)}`:''}. Quero continuar meu upgrade.`;
       // Business number from current Gringas context; opens WhatsApp.
-      window.open('https://wa.me/5571999498939?text='+encodeURIComponent(msg),'_blank');
+      (async()=>{
+  try{
+    const photos=state.photos||{};
+    const files=[];
+
+    for(const item of [
+      {path:photos.front,name:`${code}-frente.jpg`},
+      {path:photos.back,name:`${code}-traseira.jpg`}
+    ]){
+      if(!item.path) continue;
+
+      let url=item.path;
+
+      if(window.GringasCloud?.configured){
+        url=await window.GringasCloud.signedPhotoUrl(item.path,86400);
+      }
+
+      if(!url) continue;
+
+      const response=await fetch(url);
+      if(!response.ok) continue;
+
+      const blob=await response.blob();
+      files.push(new File([blob],item.name,{type:blob.type||'image/jpeg'}));
+    }
+
+    if(files.length && navigator.share && navigator.canShare && navigator.canShare({files})){
+      await navigator.share({
+        text:msg,
+        files
+      });
+      return;
+    }
+
+    if(navigator.share){
+      await navigator.share({text:msg});
+      return;
+    }
+  }catch(e){
+    console.warn('Compartilhamento com fotos não concluído:',e);
+  }
+
+  window.open('https://wa.me/5571999498939?text='+encodeURIComponent(msg),'_blank');
+})();
     };
   }
+window.showUpgrade = showUpgrade;
 
   function init(){
     const root=getResultRoot();

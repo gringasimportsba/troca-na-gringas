@@ -28,3 +28,1038 @@
 .v54-final-highlight{padding-top:18px}.v54-final-highlight span{display:block;font-size:11px;font-weight:900;color:#777;letter-spacing:1px}.v54-final-highlight strong{display:block;font-size:36px;color:#15965b;margin:3px 0}.v54-final-highlight small{font-size:13px;font-weight:800}
 .v54-secondary{width:100%;border:1px solid #d8d5cd;border-radius:17px;padding:16px;background:#fff;font-weight:850;margin-top:10px;cursor:pointer}
 @media(min-width:700px){.v54-shell{box-shadow:0 0 50px rgba(0,0,0,.35)}}
+
+/* =========================================================
+   TROCA NA GRINGAS — NOVA HOME / LAYOUT PREMIUM
+   Camada visual — não altera lógica do sistema
+   ========================================================= */
+
+:root{
+  --tn-bg:#080909;
+  --tn-card:#111313;
+  --tn-card-2:#151817;
+  --tn-line:rgba(255,255,255,.10);
+  --tn-text:#f7f7f4;
+  --tn-muted:#a9aaa5;
+  --tn-gold:#c9932b;
+  --tn-gold-light:#e7c777;
+  --tn-green:#17965d;
+}
+
+body{
+  background:
+    radial-gradient(circle at 50% -10%,rgba(201,147,43,.16),transparent 35%),
+    radial-gradient(circle at 100% 55%,rgba(23,150,93,.08),transparent 30%),
+    var(--tn-bg);
+  color:var(--tn-text);
+}
+
+.app{
+  background:transparent;
+}
+
+.topbar{
+  background:rgba(8,9,9,.82);
+  border-bottom:1px solid rgba(255,255,255,.08);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+}
+
+.brand{
+  color:#fff;
+  letter-spacing:.04em;
+}
+
+.brand .crown{
+  box-shadow:0 0 20px rgba(201,147,43,.18);
+}
+
+.brand small{
+  color:var(--tn-gold-light);
+}
+
+.welcome{
+  position:relative;
+  overflow:hidden;
+  min-height:calc(100vh - 74px);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  text-align:center;
+  padding:34px 20px 28px;
+  background:
+    radial-gradient(circle at 50% 30%,rgba(201,147,43,.13),transparent 28%),
+    linear-gradient(180deg,#0a0b0b 0%,#080909 72%,#060707 100%);
+}
+
+.welcome::before{
+  content:"";
+  position:absolute;
+  width:420px;
+  height:420px;
+  left:50%;
+  top:40%;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(201,147,43,.10),transparent 68%);
+  pointer-events:none;
+}
+
+.welcome::after{
+  content:"";
+  position:absolute;
+  left:-15%;
+  right:-15%;
+  bottom:7%;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(201,147,43,.45),transparent);
+  opacity:.7;
+  pointer-events:none;
+}
+
+.hero-copy{
+  position:relative;
+  z-index:5;
+  max-width:620px;
+  margin:0 auto;
+}
+
+.hero-copy .pill{
+  background:rgba(201,147,43,.10);
+  border:1px solid rgba(201,147,43,.42);
+  color:var(--tn-gold-light);
+  box-shadow:0 8px 35px rgba(0,0,0,.25);
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+
+.hero-copy h1{
+  margin:18px auto 12px;
+  max-width:620px;
+  color:#fff;
+  font-size:clamp(34px,7vw,62px);
+  line-height:.98;
+  letter-spacing:-.045em;
+  font-weight:900;
+  text-wrap:balance;
+}
+
+.hero-copy p{
+  max-width:500px;
+  margin:0 auto;
+  color:#b9bab5;
+  font-size:15px;
+  line-height:1.55;
+}
+
+.phone-stage{
+  position:relative;
+  z-index:3;
+  width:min(100%,460px);
+  height:245px;
+  margin:25px auto 8px;
+  perspective:1000px;
+}
+
+.phone{
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:
+    0 28px 70px rgba(0,0,0,.65),
+    inset 0 1px 0 rgba(255,255,255,.10);
+  background:
+    linear-gradient(145deg,#303332,#101111 55%,#050505);
+}
+
+.phone::after{
+  opacity:.9;
+}
+
+.phone.p1{
+  transform:translateX(-88px) rotate(-10deg) translateY(12px);
+}
+
+.phone.p2{
+  z-index:3;
+  transform:translateY(-12px);
+  box-shadow:
+    0 35px 90px rgba(0,0,0,.78),
+    0 0 55px rgba(201,147,43,.10),
+    inset 0 1px 0 rgba(255,255,255,.12);
+}
+
+.phone.p3{
+  transform:translateX(88px) rotate(10deg) translateY(12px);
+}
+
+.welcome > .primary{
+  position:relative;
+  z-index:6;
+  width:min(100%,390px);
+  margin:6px auto 0;
+  min-height:56px;
+  border-radius:16px;
+  background:linear-gradient(135deg,#d7b45d,#b98220);
+  color:#090909;
+  border:0;
+  box-shadow:
+    0 14px 35px rgba(201,147,43,.20),
+    inset 0 1px 0 rgba(255,255,255,.45);
+  font-size:14px;
+  font-weight:900;
+  letter-spacing:.08em;
+}
+
+.welcome > .primary:hover{
+  transform:translateY(-2px);
+  box-shadow:
+    0 18px 42px rgba(201,147,43,.28),
+    inset 0 1px 0 rgba(255,255,255,.5);
+}
+
+.trust{
+  position:relative;
+  z-index:5;
+  width:min(100%,620px);
+  margin:18px auto 0;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+}
+
+.trust span{
+  padding:11px 8px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;
+  background:rgba(255,255,255,.035);
+  color:#bfc0bc;
+  font-size:11px;
+  line-height:1.3;
+}
+
+.legal{
+  position:relative;
+  z-index:5;
+  color:#777975;
+  font-size:10px;
+}
+
+@media(max-width:520px){
+  .welcome{
+    min-height:calc(100vh - 58px);
+    padding:25px 16px 22px;
+  }
+
+  .hero-copy h1{
+    font-size:38px;
+  }
+
+  .hero-copy p{
+    font-size:14px;
+  }
+
+  .phone-stage{
+    height:215px;
+    margin-top:18px;
+  }
+
+  .phone{
+    width:104px;
+    height:205px;
+    border-radius:24px;
+  }
+
+  .phone.p1{
+    transform:translateX(-70px) rotate(-9deg) translateY(12px);
+  }
+
+  .phone.p3{
+    transform:translateX(70px) rotate(9deg) translateY(12px);
+  }
+
+  .trust{
+    gap:5px;
+  }
+
+  .trust span{
+    font-size:10px;
+    padding:9px 5px;
+  }
+}
+
+
+/* ===== HOME TROCA NA GRINGAS — NOVO LAYOUT ===== */
+
+.screen.welcome{
+  min-height:calc(100vh - 74px);
+  padding:34px 22px 28px;
+  background:
+    radial-gradient(circle at 50% 38%,rgba(201,150,55,.16),transparent 34%),
+    radial-gradient(circle at 50% 100%,rgba(201,150,55,.10),transparent 38%),
+    #080808;
+  color:#fff;
+  text-align:center;
+  overflow:hidden;
+}
+
+.welcome .hero-copy{
+  position:relative;
+  z-index:3;
+  max-width:620px;
+  margin:0 auto;
+}
+
+.welcome .pill{
+  display:inline-block;
+  padding:9px 18px;
+  border:1px solid rgba(214,169,79,.65);
+  border-radius:999px;
+  color:#e3bc67;
+  background:rgba(15,15,15,.72);
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.16em;
+}
+
+.welcome h1{
+  margin:22px auto 12px;
+  max-width:680px;
+  font-size:clamp(38px,8vw,72px);
+  line-height:.94;
+  letter-spacing:-.055em;
+  font-weight:950;
+}
+
+.welcome .hero-copy p{
+  max-width:570px;
+  margin:0 auto;
+  color:#bdbdbd;
+  font-size:16px;
+  line-height:1.5;
+}
+
+.welcome .phone-stage{
+  position:relative;
+  height:270px;
+  max-width:620px;
+  margin:18px auto 0;
+  z-index:1;
+}
+
+.welcome .phone{
+  position:absolute;
+  bottom:0;
+  left:50%;
+  width:116px;
+  height:225px;
+  border:2px solid #363636;
+  border-radius:28px;
+  background:
+    linear-gradient(145deg,#282a2a,#0d0e0e 55%,#171818);
+  box-shadow:
+    0 25px 55px rgba(0,0,0,.65),
+    inset 0 0 0 1px rgba(255,255,255,.04);
+}
+
+.welcome .phone.p1{
+  transform:translateX(-155px) rotate(-9deg) translateY(18px);
+}
+
+.welcome .phone.p2{
+  transform:translateX(-50%) translateY(0);
+  width:122px;
+  height:238px;
+  z-index:2;
+}
+
+.welcome .phone.p3{
+  transform:translateX(39px) rotate(9deg) translateY(18px);
+}
+
+.welcome .phone-camera{
+  position:absolute;
+  top:13px;
+  left:13px;
+  width:45px;
+  height:45px;
+  border-radius:13px;
+  background:#111;
+  box-shadow:inset 0 0 0 1px #444;
+}
+
+.welcome .phone-camera:before,
+.welcome .phone-camera:after{
+  content:"";
+  position:absolute;
+  width:14px;
+  height:14px;
+  border:4px solid #777;
+  border-radius:50%;
+}
+
+.welcome .phone-camera:before{
+  top:6px;
+  left:6px;
+}
+
+.welcome .phone-camera:after{
+  bottom:6px;
+  right:6px;
+}
+
+.welcome .phone-glow{
+  position:absolute;
+  left:50%;
+  bottom:10px;
+  width:330px;
+  height:90px;
+  transform:translateX(-50%);
+  background:radial-gradient(ellipse,rgba(214,165,68,.24),transparent 70%);
+  filter:blur(12px);
+  z-index:-1;
+}
+
+.welcome .primary{
+  position:relative;
+  z-index:4;
+  width:min(100%,520px);
+  margin:-4px auto 0;
+  padding:19px 24px;
+  border:0;
+  border-radius:18px;
+  background:linear-gradient(135deg,#f0cf82,#c9932f);
+  color:#111;
+  font-size:14px;
+  font-weight:950;
+  letter-spacing:.08em;
+  box-shadow:0 12px 35px rgba(197,145,45,.25);
+}
+
+.welcome .primary span{
+  margin-left:8px;
+  font-size:19px;
+}
+
+.welcome .trust{
+  position:relative;
+  z-index:4;
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  max-width:620px;
+  margin:16px auto 0;
+}
+
+.welcome .trust span{
+  min-height:52px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:9px;
+  border:1px solid #292929;
+  border-radius:14px;
+  background:rgba(17,17,17,.86);
+  color:#c5c5c5;
+  font-size:11px;
+  line-height:1.25;
+}
+
+.welcome .home-models{
+  max-width:680px;
+  margin:34px auto 0;
+  padding:25px 20px;
+  border-radius:24px;
+  background:#f5f3ef;
+  color:#111;
+  text-align:left;
+}
+
+.welcome .home-models-label{
+  color:#9d7a43;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.18em;
+}
+
+.welcome .home-models h2{
+  margin:7px 0 5px;
+  font-size:28px;
+  line-height:1.05;
+  letter-spacing:-.04em;
+}
+
+.welcome .home-models p{
+  margin:0;
+  color:#555;
+  font-size:13px;
+}
+
+.welcome .home-model-list{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:8px;
+  margin-top:18px;
+}
+
+.welcome .home-model-list span{
+  padding:11px 5px;
+  border-radius:12px;
+  background:#e8e6e2;
+  text-align:center;
+  font-size:10px;
+  font-weight:800;
+}
+
+.welcome .home-steps{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  max-width:680px;
+  margin:14px auto 0;
+}
+
+.welcome .home-steps div{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:13px;
+  border-radius:14px;
+  background:#ecebe8;
+  color:#111;
+  text-align:left;
+}
+
+.welcome .home-steps strong{
+  display:grid;
+  place-items:center;
+  width:34px;
+  height:34px;
+  flex:none;
+  border-radius:50%;
+  background:#ddd9d2;
+  font-size:15px;
+}
+
+.welcome .home-steps span{
+  font-size:10px;
+  line-height:1.3;
+  font-weight:700;
+}
+
+.welcome .legal{
+  max-width:600px;
+  margin:16px auto 0;
+  color:#777;
+  font-size:9px;
+  line-height:1.4;
+}
+
+@media(max-width:520px){
+  .screen.welcome{
+    padding-left:15px;
+    padding-right:15px;
+  }
+
+  .welcome h1{
+    font-size:43px;
+  }
+
+  .welcome .phone-stage{
+    height:230px;
+  }
+
+  .welcome .phone{
+    width:92px;
+    height:180px;
+  }
+
+  .welcome .phone.p1{
+    transform:translateX(-118px) rotate(-9deg) translateY(18px);
+  }
+
+  .welcome .phone.p2{
+    width:100px;
+    height:198px;
+  }
+
+  .welcome .phone.p3{
+    transform:translateX(26px) rotate(9deg) translateY(18px);
+  }
+
+  .welcome .trust{
+    grid-template-columns:1fr;
+  }
+
+  .welcome .home-model-list{
+    grid-template-columns:repeat(4,1fr);
+  }
+
+  .welcome .home-steps{
+    grid-template-columns:1fr;
+  }
+}
+
+/* ===== HERO PREMIUM — 3 IPHONES ===== */
+
+.premium-phones{
+  position:relative;
+  width:100%;
+  height:390px;
+  margin:10px auto 0;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  overflow:visible;
+  perspective:900px;
+}
+
+.real-phone{
+  position:absolute;
+  bottom:0;
+  width:145px;
+  height:285px;
+  border-radius:30px;
+  border:2px solid rgba(255,255,255,.18);
+  background:
+    linear-gradient(145deg,#3b3b3b 0%,#151515 35%,#050505 100%);
+  box-shadow:
+    0 25px 45px rgba(0,0,0,.55),
+    inset 0 0 0 1px rgba(255,255,255,.05);
+  overflow:hidden;
+  z-index:2;
+}
+
+.real-phone::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(115deg,
+      transparent 0%,
+      rgba(255,255,255,.08) 35%,
+      transparent 48%);
+  pointer-events:none;
+}
+
+.real-phone::after{
+  content:"";
+  position:absolute;
+  left:7px;
+  top:75px;
+  width:3px;
+  height:55px;
+  border-radius:3px;
+  background:#777;
+  opacity:.45;
+}
+
+.real-phone span{
+  position:absolute;
+  bottom:-48px;
+  left:50%;
+  transform:translateX(-50%);
+  color:#d8b46a;
+  font-size:11px;
+  line-height:1.2;
+  text-align:center;
+  white-space:nowrap;
+  letter-spacing:.04em;
+}
+
+.real-phone-camera{
+  position:absolute;
+  top:17px;
+  left:17px;
+  width:73px;
+  height:73px;
+  border-radius:24px;
+  background:linear-gradient(145deg,#252525,#080808);
+  border:1px solid rgba(255,255,255,.16);
+  box-shadow:inset 0 1px 4px rgba(255,255,255,.08);
+}
+
+.real-phone-camera::before,
+.real-phone-camera::after{
+  content:"";
+  position:absolute;
+  width:25px;
+  height:25px;
+  border-radius:50%;
+  border:5px solid #111;
+  background:#151515;
+  box-shadow:inset 0 0 0 2px #555;
+}
+
+.real-phone-camera::before{
+  top:8px;
+  left:8px;
+}
+
+.real-phone-camera::after{
+  bottom:8px;
+  right:8px;
+}
+
+.phone-duo{
+  left:calc(50% - 185px);
+  transform:rotate(-9deg) translateY(22px);
+  background:linear-gradient(145deg,#ddd2c5,#5d5148 55%,#171717);
+  z-index:1;
+}
+
+.phone-pro{
+  left:50%;
+  transform:translateX(-50%) translateY(4px);
+  width:158px;
+  height:305px;
+  background:linear-gradient(145deg,#d7b88e,#68533e 48%,#151515);
+  z-index:3;
+}
+
+.phone-pro-max{
+  right:calc(50% - 185px);
+  transform:rotate(9deg) translateY(22px);
+  background:linear-gradient(145deg,#b7aea4,#4c4946 48%,#101010);
+  z-index:2;
+}
+
+.pro-camera,
+.pro-max-camera{
+  width:78px;
+  height:78px;
+}
+
+.premium-glow{
+  position:absolute;
+  width:430px;
+  height:180px;
+  bottom:15px;
+  left:50%;
+  transform:translateX(-50%);
+  background:radial-gradient(
+    ellipse,
+    rgba(201,151,62,.28) 0%,
+    rgba(201,151,62,.08) 35%,
+    transparent 70%
+  );
+  filter:blur(18px);
+  z-index:0;
+  pointer-events:none;
+}
+
+@media(max-width:600px){
+  .premium-phones{
+    height:350px;
+    transform:scale(.88);
+    transform-origin:center bottom;
+    margin-top:-5px;
+  }
+
+  .phone-duo{
+    left:calc(50% - 165px);
+  }
+
+  .phone-pro-max{
+    right:calc(50% - 165px);
+  }
+}
+
+
+/* ===== TROCA NA GRINGAS — HERO PREMIUM V2 ===== */
+
+.premium-phones{
+  position:relative !important;
+  width:100% !important;
+  height:330px !important;
+  margin:8px auto 0 !important;
+  overflow:visible !important;
+  isolation:isolate;
+}
+
+.premium-phones .real-phone{
+  position:absolute !important;
+  bottom:0 !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:flex-start !important;
+  border:1px solid rgba(255,255,255,.18) !important;
+  border-radius:28px !important;
+  box-shadow:
+    0 25px 55px rgba(0,0,0,.55),
+    inset 0 1px 0 rgba(255,255,255,.16) !important;
+  overflow:visible !important;
+  z-index:2;
+}
+
+/* corpo dos aparelhos */
+.premium-phones .real-phone::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:28px;
+  background:
+    linear-gradient(145deg,
+      rgba(255,255,255,.18) 0%,
+      rgba(255,255,255,.03) 18%,
+      rgba(0,0,0,.12) 55%,
+      rgba(0,0,0,.42) 100%);
+  pointer-events:none;
+}
+
+.premium-phones .real-phone::after{
+  content:"";
+  position:absolute;
+  inset:3px;
+  border-radius:25px;
+  border:1px solid rgba(255,255,255,.06);
+  pointer-events:none;
+}
+
+/* nomes */
+.premium-phones .real-phone span{
+  position:absolute !important;
+  bottom:-34px !important;
+  left:50% !important;
+  transform:translateX(-50%) !important;
+  width:max-content !important;
+  color:#f5eee4 !important;
+  font-size:11px !important;
+  line-height:1.15 !important;
+  font-weight:700 !important;
+  letter-spacing:.12em !important;
+  text-transform:uppercase !important;
+  text-align:center !important;
+  z-index:20 !important;
+  text-shadow:0 2px 10px rgba(0,0,0,.8);
+}
+
+.premium-phones .real-phone span b{
+  color:#d6aa5b !important;
+  font-weight:800 !important;
+}
+
+/* DUO */
+.premium-phones .phone-duo{
+  left:50% !important;
+  bottom:28px !important;
+  width:132px !important;
+  height:260px !important;
+  transform:translateX(-150px) rotate(-8deg) !important;
+  background:
+    linear-gradient(150deg,#d9d2c9 0%,#9d968e 35%,#454442 72%,#171717 100%) !important;
+  z-index:2 !important;
+}
+
+/* PRO — centro */
+.premium-phones .phone-pro{
+  left:50% !important;
+  bottom:8px !important;
+  width:150px !important;
+  height:292px !important;
+  transform:translateX(-50%) !important;
+  background:
+    linear-gradient(150deg,#b99a73 0%,#7f684d 38%,#40372d 70%,#181818 100%) !important;
+  z-index:5 !important;
+}
+
+/* PRO MAX */
+.premium-phones .phone-pro-max{
+  right:50% !important;
+  bottom:28px !important;
+  width:138px !important;
+  height:272px !important;
+  transform:translateX(150px) rotate(8deg) !important;
+  background:
+    linear-gradient(150deg,#ddd9d2 0%,#aaa69f 36%,#555552 70%,#1b1b1b 100%) !important;
+  z-index:2 !important;
+}
+
+/* módulos de câmera */
+.premium-phones .real-phone-camera{
+  position:absolute !important;
+  top:13px !important;
+  left:13px !important;
+  width:67px !important;
+  height:67px !important;
+  border-radius:20px !important;
+  background:#101010 !important;
+  border:1px solid rgba(255,255,255,.18) !important;
+  box-shadow:
+    0 8px 18px rgba(0,0,0,.45),
+    inset 0 1px 2px rgba(255,255,255,.12) !important;
+  z-index:4 !important;
+}
+
+/* lentes */
+.premium-phones .real-phone-camera::before,
+.premium-phones .real-phone-camera::after{
+  content:"";
+  position:absolute;
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 35% 30%,
+      #777 0 9%,
+      #1d1d1d 11% 40%,
+      #050505 42% 67%,
+      #5a5a5a 69% 74%,
+      #111 76%);
+  box-shadow:0 2px 5px rgba(0,0,0,.7);
+}
+
+.premium-phones .real-phone-camera::before{
+  top:10px;
+  left:10px;
+}
+
+.premium-phones .real-phone-camera::after{
+  bottom:10px;
+  right:10px;
+}
+
+/* câmera do DUO */
+.premium-phones .duo-camera{
+  background:#0c0c0c !important;
+}
+
+/* câmera PRO */
+.premium-phones .pro-camera{
+  width:72px !important;
+  height:72px !important;
+  border-radius:21px !important;
+}
+
+/* câmera PRO MAX */
+.premium-phones .pro-max-camera{
+  width:74px !important;
+  height:74px !important;
+  border-radius:22px !important;
+}
+
+/* brilho atrás dos aparelhos */
+.premium-phones .premium-glow{
+  position:absolute !important;
+  width:430px !important;
+  height:190px !important;
+  left:50% !important;
+  bottom:15px !important;
+  transform:translateX(-50%) !important;
+  background:radial-gradient(
+    ellipse,
+    rgba(201,151,62,.30) 0%,
+    rgba(201,151,62,.10) 38%,
+    transparent 72%
+  ) !important;
+  filter:blur(22px) !important;
+  z-index:0 !important;
+  pointer-events:none !important;
+}
+
+/* mobile */
+@media(max-width:600px){
+  .premium-phones{
+    height:300px !important;
+    margin-top:0 !important;
+  }
+
+  .premium-phones .phone-duo{
+    width:112px !important;
+    height:228px !important;
+    bottom:24px !important;
+    transform:translateX(-126px) rotate(-8deg) !important;
+  }
+
+  .premium-phones .phone-pro{
+    width:128px !important;
+    height:258px !important;
+    bottom:5px !important;
+  }
+
+  .premium-phones .phone-pro-max{
+    width:116px !important;
+    height:238px !important;
+    bottom:24px !important;
+    transform:translateX(126px) rotate(8deg) !important;
+  }
+
+  .premium-phones .real-phone-camera{
+    width:58px !important;
+    height:58px !important;
+    border-radius:17px !important;
+    top:11px !important;
+    left:11px !important;
+  }
+
+  .premium-phones .pro-camera,
+  .premium-phones .pro-max-camera{
+    width:62px !important;
+    height:62px !important;
+  }
+
+  .premium-phones .real-phone span{
+    bottom:-30px !important;
+    font-size:9px !important;
+  }
+}
+
+
+/* AJUSTE VISUAL GRINGAS TROCA - CENTRALIZAR APARELHOS */
+.premium-phones{
+  width:100%;
+  max-width:100%;
+  overflow:hidden;
+}
+
+.premium-phones .phone-stage{
+  width:100%;
+  max-width:804px;
+  margin:0 auto;
+  left:auto;
+  right:auto;
+}
+
+.premium-phones .phone-duo{
+  left:50%;
+  transform:translateX(-50%) translateY(22px) rotate(-9deg);
+}
+
+.premium-phones .phone-pro{
+  left:50%;
+  transform:translateX(-50%) translateY(4px);
+}
+
+.premium-phones .phone-pro-max{
+  right:auto;
+  left:50%;
+  transform:translateX(-50%) translateY(22px) rotate(9deg);
+}
+
+@media(max-width:600px){
+  .premium-phones .phone-stage{
+    width:100%;
+    max-width:100%;
+  }
+}
+
+
+/* AJUSTE 2 - COMPOSICAO DOS 3 APARELHOS */
+.premium-phones .phone-duo{
+  left:calc(50% - 175px) !important;
+  transform:translateX(-50%) translateY(22px) rotate(-9deg) !important;
+  z-index:1 !important;
+}
+
+.premium-phones .phone-pro{
+  left:50% !important;
+  transform:translateX(-50%) translateY(4px) !important;
+  z-index:3 !important;
+}
+
+.premium-phones .phone-pro-max{
+  left:calc(50% + 175px) !important;
+  right:auto !important;
+  transform:translateX(-50%) translateY(22px) rotate(9deg) !important;
+  z-index:2 !important;
+}
+

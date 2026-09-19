@@ -4,7 +4,15 @@ const PRICES_KEY='gringasTrocaAdminPricesV55';
 const RULES_KEY='gringasTrocaAdminRulesV55';
 const PRODUCTS_KEY='gringasTrocaAdminProductsV55';
 const statuses=['Nova','Em análise','Cliente contatado','Aguardando aparelho','Aprovado','Troca realizada','Recusado','Cliente desistiu'];
-const demoPrices={'iPhone 17 Pro Max':6500,'iPhone 17 Pro':5700,'iPhone 16 Pro Max':5350,'iPhone 16 Pro':4550,'iPhone 15 Pro Max':4250,'iPhone 15 Pro':3650};
+const demoPrices={
+'iPhone 11':900,'iPhone 11 Pro':1150,'iPhone 11 Pro Max':1350,
+'iPhone 12':1250,'iPhone 12 Pro':1550,'iPhone 12 Pro Max':1800,
+'iPhone 13':1750,'iPhone 13 Pro':2200,'iPhone 13 Pro Max':2500,
+'iPhone 14':2250,'iPhone 14 Pro':2850,'iPhone 14 Pro Max':3250,
+'iPhone 15':2800,'iPhone 15 Pro':3650,'iPhone 15 Pro Max':4250,
+'iPhone 16':3500,'iPhone 16 Pro':4550,'iPhone 16 Pro Max':5350,
+'iPhone 17':4300,'iPhone 17 Pro':5700,'iPhone 17 Pro Max':6500
+};
 const demoRules={battery85:100,battery80:220,batteryLow:400,good:100,regular:300,repair:100,maxDiscount:30};
 const demoProducts=[{name:'iPhone 18',storage:'256GB',price:6299},{name:'iPhone 18 Pro',storage:'256GB',price:8499},{name:'iPhone 18 Pro Max',storage:'256GB',price:9499}];
 let currentView='overview', query='', statusFilter='Todos';
@@ -80,7 +88,7 @@ function clients(){
 }
 function prices(){
  setTitles('Aparelhos e preços','Valores-base demonstrativos e editáveis neste navegador.');
- const p=loadObj(PRICES_KEY,demoPrices);
+ const p={...demoPrices,...loadObj(PRICES_KEY,{}),};
  $('#content').innerHTML=`<h2 class="section-title">Tabela-base</h2><div class="grid2">${Object.entries(p).map(([k,v])=>`<div class="setting"><h3>${esc(k)}</h3><p>Valor-base do aparelho em excelente estado.</p><input type="number" data-price="${esc(k)}" value="${v}"></div>`).join('')}</div><div style="margin-top:16px"><button class="savebtn" id="savePrices">SALVAR VALORES</button></div>`;
  $('#savePrices').onclick=()=>{document.querySelectorAll('[data-price]').forEach(i=>p[i.dataset.price]=Number(i.value||0));saveObj(PRICES_KEY,p);alert('Valores salvos localmente. A ligação desses preços ao motor entra após validação da tabela real.')};
 }
