@@ -69,6 +69,14 @@ export const rules = Object.freeze({
     screen: Object.freeze(['Está trincada', 'Possui problema no touch']),
     issues: Object.freeze(['Face ID / Touch ID']),
   }),
+  // Faixas avaliadas em ordem: vale a primeira cuja bateria mínima é atingida.
+  batteryDiscount: Object.freeze([
+    Object.freeze({ min: 90, amount: 0 }),
+    Object.freeze({ min: 85, amount: 100 }),
+    Object.freeze({ min: 80, amount: 220 }),
+    Object.freeze({ min: 0, amount: 400 }),
+  ]),
+  repairDiscount: 100,
   maximumDiscountRate: 0.30,
 });
 
@@ -79,7 +87,7 @@ function batteryPenalty(value) {
   if (!Number.isInteger(value) || value < 50 || value > 100) {
     throw new Error('Saúde da bateria inválida.');
   }
-  const amount = value >= 90 ? 0 : value >= 85 ? 100 : value >= 80 ? 220 : 400;
+  const amount = rules.batteryDiscount.find(tier => value >= tier.min).amount;
   return { amount, label: `Bateria ${value}%`, manual: false };
 }
 
@@ -117,12 +125,12 @@ export function calculate(state, prices = catalog.baseByModel) {
     if (rules.manualReasons.issues.includes(issue)) reasons.push(`${issue} com problema`);
   }
 
-  if (state.repair === 'Sim') addDiscount('Histórico de manutenção', 100);
+  if (state.repair === 'Sim') addDiscount('Histórico de manutenção', rules.repairDiscount);
   if (state.partAlert === 'Sim') reasons.push('Aviso de peça no sistema');
   if (state.partAlert === 'Não sei') reasons.push('Alerta de peça precisa ser verificado');
 
   const cap = Math.round(base * rules.maximumDiscountRate);
-  if (totalDiscount > cap) reasons.push('Descontos ultrapassam 30% do valor-base');
+  if (totalDiscount > cap) reasons.push(`Descontos ultrapassam ${Math.round(rules.maximumDiscountRate * 100)}% do valor-base`);
   const estimated = Math.max(0, base - Math.min(totalDiscount, cap));
   const manual = [...new Set(reasons)];
 

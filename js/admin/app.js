@@ -75,6 +75,25 @@ function bindRows() {
   });
 }
 
+function calculationBox(record) {
+  const calc = record.calculation || {};
+  if (!Number.isFinite(Number(calc.base)) || !Number(calc.base)) return '';
+  const lines = Array.isArray(calc.lines) ? calc.lines : [];
+  const manual = Array.isArray(calc.manual) ? calc.manual : [];
+  const applied = Math.max(0, Number(calc.base) - Number(calc.estimated));
+  const capped = Number(calc.totalDiscount) > applied;
+  return `<div class="detail-box"><h3>Diagnóstico do cálculo</h3>
+    <div class="kv"><span>Valor-base (modelo + capacidade)</span><b>${money(calc.base)}</b></div>
+    ${lines.map(line => `<div class="kv"><span>${escapeHtml(line.label)}</span><b>− ${money(line.amount)}</b></div>`).join('') || '<div class="kv"><span>Descontos automáticos</span><b>R$ 0</b></div>'}
+    <div class="kv"><span>Total de descontos calculado</span><b>${money(calc.totalDiscount)}</b></div>
+    ${capped ? `<div class="kv"><span>Desconto aplicado (limite)</span><b>− ${money(applied)}</b></div>` : ''}
+    <div class="kv"><span>Estimativa</span><b>${money(calc.estimated)}</b></div>
+    ${manual.length
+      ? `<p><b>Análise manual:</b> ${manual.map(reason => escapeHtml(reason)).join(' • ')}</p>`
+      : '<p>Nenhuma regra de análise manual foi acionada.</p>'}
+  </div>`;
+}
+
 function greeting() {
   const hour = new Date().getHours();
   return hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
@@ -250,6 +269,7 @@ async function openDetail(id) {
   $('#drawerContent').innerHTML = `<div class="detail-head"><div class="eyebrow">${escapeHtml(record.id)} • ${dateBR(record.createdAt)}</div><h2>${escapeHtml(record.device?.model || '—')} ${escapeHtml(record.device?.storage || '')}</h2><p>${escapeHtml(record.customer?.name || '—')} • ${escapeHtml(record.customer?.phone || 'Sem WhatsApp')}</p></div>
     <div class="detail-value">${money(record.calculation?.estimated)}</div>
     ${record.upgrade ? `<div class="upgrade-tag">↗ Interesse: ${escapeHtml(record.upgrade.productName || '—')} ${escapeHtml(record.upgrade.storage || '')} • diferença ${record.upgrade.difference == null ? 'a definir' : money(record.upgrade.difference)}</div>` : ''}
+    ${calculationBox(record)}
     <div class="detail-box"><h3>Aparelho</h3>
       <div class="kv"><span>Bateria</span><b>${escapeHtml(record.device?.battery ?? '—')}${typeof record.device?.battery === 'number' ? '%' : ''}</b></div>
       <div class="kv"><span>Estado físico</span><b>${escapeHtml(record.device?.condition || '—')}</b></div>

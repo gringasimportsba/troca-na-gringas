@@ -204,9 +204,16 @@ export function createAdminRepository(settings = config, options = {}) {
     }
   }
 
+  // No modo cloud o painel nunca grava histórico local; este apaga o que restou
+  // de versões anteriores (nomes e telefones de clientes) ao encerrar a sessão.
+  function clearLocalHistory() {
+    try { storage?.removeItem(HISTORY_KEY); } catch { /* armazenamento indisponível */ }
+  }
+
   async function signOut() {
     currentMembership = null;
     if (!configured) return;
+    clearLocalHistory();
     const { error } = await cloudClient().auth.signOut();
     if (error) throw error;
   }

@@ -27,8 +27,8 @@ function progress(step) {
     <div class="progress"><span style="width:${Math.round(step / TOTAL_STEPS * 100)}%"></span></div></div>`;
 }
 
-function shell(step, title, subtitle, body, footer) {
-  return `<section class="screen">${progress(step)}<h1 class="question">${title}</h1>
+function shell(step, title, subtitle, body, footer, animate = true) {
+  return `<section class="screen${animate ? '' : ' is-static'}">${progress(step)}<h1 class="question">${title}</h1>
     ${subtitle ? `<p class="sub">${subtitle}</p>` : ''}<div class="screen-body">${body}</div>
     <p class="note" data-error role="alert" hidden></p>
     <div class="footer-actions">${footer}</div></section>`;
@@ -45,17 +45,20 @@ function showError(root, message = '') {
   target.hidden = !message;
 }
 
-function choices(state, field, values, descriptions = []) {
+function choices(state, field, values, descriptions = [], { className = '', extra = '' } = {}) {
   const modelChoices = field === 'model';
-  return `<div class="choices${modelChoices ? ' model-grid' : ''}">${values.map((value, index) => {
+  return `<div class="choices${modelChoices ? ' model-grid' : ''}${className ? ` ${className}` : ''}">${values.map((value, index) => {
     const selected = Array.isArray(state[field]) ? state[field].includes(value) : state[field] === value;
     return `<button type="button" class="choice${modelChoices ? ' model-card' : ''}${selected ? ' selected' : ''}" data-field="${field}" data-value="${escapeHtml(value)}" aria-pressed="${selected}">
       ${modelChoices ? '<span class="mini-phone"></span>' : ''}<div><strong>${escapeHtml(value)}</strong>${descriptions[index] ? `<small>${escapeHtml(descriptions[index])}</small>` : ''}</div><span class="radio"></span></button>`;
-  }).join('')}</div>`;
+  }).join('')}${extra}</div>`;
 }
 
-function field(label, content) {
-  return `<div class="field"><label>${label}</label>${content}</div>`;
+function field(label, content, forId = '') {
+  const heading = forId
+    ? `<label class="label" for="${forId}">${label}</label>`
+    : `<span class="label">${label}</span>`;
+  return `<div class="field">${heading}${content}</div>`;
 }
 
 function readPhoto(file, maxSide = 1600, quality = 0.82) {
@@ -107,6 +110,7 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
   let photoLoading = false;
   let closeUpgrade = null;
   let currentView = 'wizard';
+  let renderedStep = null;
 
   function pushNavigation(view = currentView, step = state.step, { replace = false } = {}) {
     currentView = view;
@@ -122,6 +126,7 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
     saving = false;
     photoLoading = false;
     currentView = 'wizard';
+    renderedStep = null;
     pushNavigation('wizard', 1, { replace: true });
     render();
   }
@@ -132,6 +137,27 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
     const error = validateStep(state);
     nextButton.disabled = Boolean(error) || saving || photoLoading;
     nextButton.classList.toggle('disabled', nextButton.disabled);
+  }
+
+  function refreshSelections() {
+    root.querySelectorAll('[data-field]').forEach(control => {
+      const { field: key, value } = control.dataset;
+      const selected = Array.isArray(state[key]) ? state[key].includes(value) : state[key] === value;
+      if (control.getAttribute('role') === 'switch') {
+        control.setAttribute('aria-checked', selected);
+        control.querySelector('.switch')?.classList.toggle('on', selected);
+      } else {
+        control.classList.toggle('selected', selected);
+        control.setAttribute('aria-pressed', selected);
+      }
+    });
+    const none = root.querySelector('#noAccessories');
+    if (none) {
+      none.classList.toggle('selected', !state.accessories.length);
+      none.setAttribute('aria-pressed', !state.accessories.length);
+    }
+    showError(root, '');
+    syncNextButton();
   }
 
   async function next() {
@@ -196,10 +222,9 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
           state.warrantyDate = '';
           state.appleCare = '';
         }
-        const autoAdvance = ['model', 'storage', 'condition', 'screen'].includes(key) ||
-          (key === 'warranty' && value !== 'Sim');
-        if (autoAdvance) next();
-        else render();
+
+        if (key === 'warranty') render();
+        else refreshSelections();
       });
     });
 
@@ -231,7 +256,7 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
 
     root.querySelector('#noAccessories')?.addEventListener('click', () => {
       state.accessories = [];
-      render();
+      refreshSelections();
     });
     root.querySelector('#noNotes')?.addEventListener('click', () => {
       state.notes = '';
@@ -247,6 +272,7 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
           if (validationError) throw new Error(validationError);
           photoLoading = true;
           input.disabled = true;
+          input.closest('.photo-box')?.classList.add('loading');
           syncNextButton();
           state.photos[input.dataset.photo] = await readPhoto(file);
           photoLoading = false;
@@ -255,6 +281,7 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
           photoLoading = false;
           input.value = '';
           input.disabled = false;
+          input.closest('.photo-box')?.classList.remove('loading');
           showError(root, error.message || 'Foto inválida.');
           syncNextButton();
         }
@@ -315,55 +342,61 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
         body = choices(state, 'screen', Object.keys(rules.screenDiscount));
         break;
       case 6:
-        title = 'Existe algum problema nas seguintes funções?';
-        subtitle = 'Ative apenas o que NÃO está funcionando corretamente.';
-        body = `<div class="toggle-list">${Object.keys(rules.issueDiscount).map(issue => `<div class="toggle-row"><span>${escapeHtml(issue)}</span>
-          <button type="button" class="switch${state.issues.includes(issue) ? ' on' : ''}" data-field="issues" data-value="${escapeHtml(issue)}" aria-label="Problema em ${escapeHtml(issue)}" aria-pressed="${state.issues.includes(issue)}"></button></div>`).join('')}</div>`;
+        title = 'Alguma dessas funções está com problema?';
+        subtitle = 'Ative apenas o que <b>não</b> está funcionando. Se está tudo certo, é só continuar.';
+        body = `<div class="toggle-list">${Object.keys(rules.issueDiscount).map(issue => {
+          const on = state.issues.includes(issue);
+          return `<button type="button" class="toggle-row" data-field="issues" data-value="${escapeHtml(issue)}" role="switch" aria-checked="${on}">
+            <span>${escapeHtml(issue)}</span><span class="switch${on ? ' on' : ''}" aria-hidden="true"></span></button>`;
+        }).join('')}</div>`;
         break;
       case 7:
         title = 'Seu iPhone já passou por manutenção?';
         subtitle = 'Também precisamos saber se existe algum alerta de peça no sistema.';
-        body = field('MANUTENÇÃO', choices(state, 'repair', ['Não', 'Sim', 'Não sei'])) +
-          field('APRESENTA AVISO DE PEÇA?', choices(state, 'partAlert', ['Não', 'Sim', 'Não sei']));
+        body = field('JÁ FOI PARA MANUTENÇÃO?', choices(state, 'repair', ['Não', 'Sim', 'Não sei'])) +
+          field('APARECE AVISO DE PEÇA DESCONHECIDA?', choices(state, 'partAlert', ['Não', 'Sim', 'Não sei']));
         break;
       case 8:
         title = 'Seu aparelho ainda possui garantia Apple?';
         subtitle = 'A garantia não define o valor sozinha, mas fica registrada para a análise da Gringas.';
         body = choices(state, 'warranty', ['Sim', 'Não', 'Não sei']) + (state.warranty === 'Sim'
-          ? field('GARANTIA VÁLIDA ATÉ', `<input aria-label="Garantia válida até" type="date" id="wdate" value="${escapeHtml(state.warrantyDate)}">`) +
+          ? field('GARANTIA VÁLIDA ATÉ (OPCIONAL)', `<input class="input" type="date" id="wdate" value="${escapeHtml(state.warrantyDate)}">`, 'wdate') +
             field('POSSUI APPLECARE+?', choices(state, 'appleCare', ['Sim', 'Não', 'Não sei']))
           : '') + '<div class="note">Garantia e AppleCare+ são informações de apoio e não aumentam automaticamente a estimativa.</div>';
         break;
       case 9:
-        title = 'Agora queremos conhecer seu aparelho.';
-        subtitle = 'Frente e traseira são obrigatórias. As demais fotos ajudam a Gringas a conferir o estado informado.';
+        title = 'Agora mostre seu aparelho.';
+        subtitle = 'Frente e traseira são obrigatórias. As outras ajudam a Gringas a confirmar o estado informado.';
         body = `<div class="photo-grid">${[
           ['front', 'Frente'], ['back', 'Traseira'], ['left', 'Lateral esquerda'],
           ['right', 'Lateral direita'], ['detail', 'Avaria / detalhe'],
         ].map(([key, label]) => {
           const source = safeImageUrl(state.photos[key]);
           const required = key === 'front' || key === 'back';
-          return `<div class="photo-wrap"><label class="photo-box">${source
-            ? `<img src="${escapeHtml(source)}" alt="${escapeHtml(label)}">`
-            : `<div><div class="photo-plus">＋</div><b>${escapeHtml(label)}</b><br><small>${required ? 'obrigatória' : 'opcional'}</small></div>`}
+          return `<div class="photo-wrap"><label class="photo-box${source ? ' has-photo' : ''}${required ? ' required' : ''}">${source
+            ? `<img src="${escapeHtml(source)}" alt="Foto: ${escapeHtml(label)}">`
+            : `<span class="photo-plus" aria-hidden="true">＋</span><b>${escapeHtml(label)}</b><small>${required ? 'obrigatória' : 'opcional'}</small>`}
             <input aria-label="Foto: ${escapeHtml(label)}" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" data-photo="${key}"${photoLoading ? ' disabled' : ''}></label>
-            ${source ? `<button type="button" class="photo-remove" data-remove-photo="${key}">REMOVER</button>` : ''}</div>`;
-        }).join('')}</div><div class="note">Envie JPEG, PNG ou WebP de até 6 MB. As fotos não alteram o valor automaticamente.</div>`;
+            ${source ? `<button type="button" class="photo-remove" data-remove-photo="${key}">Remover</button>` : ''}</div>`;
+        }).join('')}</div><p class="note">Tire a foto na hora ou escolha da galeria. Prefira um lugar bem iluminado. Envie JPEG, PNG ou WebP de até 6 MB.</p>`;
         break;
       case 10:
-        title = 'Tem algo importante que devemos saber?';
-        subtitle = 'Conte sobre marcas, reparos ou qualquer outra informação útil.';
-        body = `<div class="field"><textarea aria-label="Observações" id="notes" maxlength="500" placeholder="Ex.: Troquei a bateria há 4 meses...">${escapeHtml(state.notes)}</textarea>
+        title = 'Algo mais que devemos saber?';
+        subtitle = 'Conte sobre marcas, reparos ou qualquer detalhe útil. É opcional.';
+        body = `<div class="field"><textarea class="input" aria-label="Observações" id="notes" maxlength="500" rows="4" placeholder="Ex.: troquei a bateria há 4 meses na Apple. Pequena marca na lateral direita...">${escapeHtml(state.notes)}</textarea>
           <div class="counter"><span id="count">${state.notes.length}</span>/500</div></div>` +
-          field('O QUE ACOMPANHA O APARELHO?', choices(state, 'accessories', ['Caixa', 'Cabo', 'Nota fiscal']) +
-            `<button type="button" class="choice${state.accessories.length ? '' : ' selected'}" id="noAccessories"><strong>Nenhum</strong><span class="radio"></span></button>`);
+          field('O QUE ACOMPANHA O APARELHO?', '<p class="hint">Você pode avaliar só o aparelho.</p>' +
+            choices(state, 'accessories', ['Caixa', 'Cabo', 'Nota fiscal'], [], {
+              className: 'chips',
+              extra: `<button type="button" class="choice${state.accessories.length ? '' : ' selected'}" id="noAccessories" aria-pressed="${!state.accessories.length}"><strong>Nenhum</strong><span class="radio" aria-hidden="true"></span></button>`,
+            }));
         extra = '<button type="button" class="btn ghost" id="noNotes">NÃO TENHO OBSERVAÇÕES</button>';
         break;
       case 11:
-        title = 'Estamos quase lá. 🔥';
-        subtitle = 'Deixe seus dados para identificarmos a avaliação e entrarmos em contato.';
-        body = field('NOME COMPLETO', `<input aria-label="Nome completo" id="name" maxlength="120" autocomplete="name" value="${escapeHtml(state.name)}" placeholder="Seu nome">`) +
-          field('WHATSAPP', `<input aria-label="WhatsApp" id="phone" maxlength="15" autocomplete="tel-national" type="tel" value="${escapeHtml(maskPhone(state.phone))}" placeholder="(71) 99999-9999" inputmode="tel">`) +
+        title = 'Estamos quase lá.';
+        subtitle = 'Deixe seus dados para identificarmos sua avaliação e falarmos com você.';
+        body = field('NOME COMPLETO', `<input class="input" id="name" maxlength="120" autocomplete="name" autocapitalize="words" value="${escapeHtml(state.name)}" placeholder="Seu nome e sobrenome">`, 'name') +
+          field('WHATSAPP', `<input class="input" id="phone" maxlength="15" autocomplete="tel-national" type="tel" value="${escapeHtml(maskPhone(state.phone))}" placeholder="(71) 99999-9999" inputmode="tel">`, 'phone') +
           field('COMO PREFERE SER ATENDIDO?', choices(state, 'service', ['WhatsApp', 'Loja física'])) +
           '<div class="note">Ao continuar, você confirma que as informações fornecidas são verdadeiras e autoriza a Gringas a utilizá-las nesta avaliação.</div>';
         break;
@@ -373,7 +406,9 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
 
     const label = state.step === 11 ? 'CALCULAR MINHA AVALIAÇÃO →' : 'CONTINUAR →';
     const className = state.step === 11 ? 'primary gold' : 'primary';
-    root.innerHTML = shell(state.step, title, subtitle, body, `${button(label, className, disabled)}${extra}`);
+    const animate = renderedStep !== state.step;
+    renderedStep = state.step;
+    root.innerHTML = shell(state.step, title, subtitle, body, `${button(label, className, disabled)}${extra}`, animate);
     bindStepEvents();
   }
 
@@ -485,9 +520,12 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
   function render() {
     if (back) back.classList.toggle('hidden', state.step === 1);
     document.body.dataset.view = currentView;
-    if (currentView === 'upgrade' && record) showUpgrade({ push: false });
-    else if (state.step === 12 && record) {
+    if (currentView === 'upgrade' && record) {
+      renderedStep = null;
+      showUpgrade({ push: false });
+    } else if (state.step === 12 && record) {
       currentView = 'result';
+      renderedStep = null;
       renderResult();
     } else {
       currentView = 'wizard';
