@@ -28,13 +28,13 @@ function progress(step) {
 
 function shell(step, title, subtitle, body, footer) {
   return `<section class="screen">${progress(step)}<h1 class="question">${title}</h1>
-    ${subtitle ? `<p class="sub">${subtitle}</p>` : ''}${body}
+    ${subtitle ? `<p class="sub">${subtitle}</p>` : ''}<div class="screen-body">${body}</div>
     <p class="note" data-error role="alert" hidden></p>
     <div class="footer-actions">${footer}</div></section>`;
 }
 
 function button(label = 'CONTINUAR →', className = 'primary', disabled = false) {
-  return `<button type="button" class="${className}${disabled ? ' disabled' : ''}" data-next${disabled ? ' disabled' : ''}>${label}</button>`;
+  return `<button type="button" class="btn ${className}${disabled ? ' disabled' : ''}" data-next${disabled ? ' disabled' : ''}>${label}</button>`;
 }
 
 function showError(root, message = '') {
@@ -57,17 +57,40 @@ function field(label, content) {
   return `<div class="field"><label>${label}</label>${content}</div>`;
 }
 
-function readPhoto(file) {
+function readPhoto(file, maxSide = 1600, quality = 0.82) {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Não foi possível ler a foto. Escolha outro arquivo.'));
-    reader.onload = () => {
-      const source = safeImageUrl(reader.result);
-      if (!source) reject(new Error('A foto não pôde ser validada. Use JPEG, PNG ou WebP.'));
-      else resolve(source);
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Não foi possível ler a foto. Escolha outro arquivo.'));
     };
-    reader.readAsDataURL(file);
+    image.onload = () => {
+      try {
+        const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+        canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+        URL.revokeObjectURL(objectUrl);
+        const source = safeImageUrl(canvas.toDataURL('image/jpeg', quality));
+        if (!source) throw new Error('A foto não pôde ser validada. Use JPEG, PNG ou WebP.');
+        resolve(source);
+      } catch (error) {
+        URL.revokeObjectURL(objectUrl);
+        reject(error);
+      }
+    };
+    image.src = objectUrl;
   });
+}
+
+function maskPhone(value) {
+  const digits = String(value || '').replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 2) return digits ? `(${digits}` : '';
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
 function whatsappUrl(message) {
@@ -85,6 +108,13 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
   let saving = false;
   let photoLoading = false;
   let closeUpgrade = null;
+  let currentView = 'wizard';
+
+  function pushNavigation(view = currentView, step = state.step, { replace = false } = {}) {
+    currentView = view;
+    const method = replace ? 'replaceState' : 'pushState';
+    globalThis.history?.[method]({ gringasEvaluation: true, view, step }, '');
+  }
 
   function reset() {
     closeUpgrade?.();
@@ -93,6 +123,8 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
     record = null;
     saving = false;
     photoLoading = false;
+    currentView = 'wizard';
+    pushNavigation('wizard', 1, { replace: true });
     render();
   }
 
@@ -115,7 +147,9 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
 
     if (state.step < TOTAL_STEPS) {
       state.step += 1;
+      pushNavigation('wizard', state.step);
       render();
+      globalThis.scrollTo?.(0, 0);
       return;
     }
 
@@ -134,7 +168,9 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
       record = await saveEvaluation(state, calculation);
       state.evaluationId = record.id;
       state.step = 12;
+      pushNavigation('result', state.step);
       render();
+      globalThis.scrollTo?.(0, 0);
     } catch (error) {
       saving = false;
       if (submit) submit.textContent = 'CALCULAR MINHA AVALIAÇÃO →';
@@ -161,7 +197,10 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
           state.warrantyDate = '';
           state.appleCare = '';
         }
-        render();
+        const autoAdvance = ['model', 'storage', 'condition', 'screen'].includes(key) ||
+          (key === 'warranty' && value !== 'Sim');
+        if (autoAdvance) next();
+        else render();
       });
     });
 
@@ -183,7 +222,8 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
       const input = root.querySelector(`#${id}`);
       if (!input) continue;
       input.addEventListener('input', event => {
-        state[key] = event.target.value;
+        state[key] = id === 'phone' ? maskPhone(event.target.value) : event.target.value;
+        if (id === 'phone') event.target.value = state.phone;
         if (id === 'notes') root.querySelector('#count').textContent = state.notes.length;
         showError(root, '');
         syncNextButton();
@@ -257,7 +297,7 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
           <div class="battery-value">${known ? `${state.battery}%` : '—'}</div>
           <input aria-label="Saúde da bateria" class="range" id="battery" type="range" min="50" max="100" value="${known ? state.battery : 87}">
           <div class="help"><b>Como verificar?</b><br>Ajustes → Bateria → Saúde da Bateria</div></div>`;
-        extra = '<button type="button" class="secondary" id="unknownBattery">NÃO CONSIGO VERIFICAR</button>';
+        extra = '<button type="button" class="btn ghost" id="unknownBattery">NÃO CONSIGO VERIFICAR</button>';
         break;
       }
       case 4:
@@ -318,13 +358,13 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
           <div class="counter"><span id="count">${state.notes.length}</span>/500</div></div>` +
           field('O QUE ACOMPANHA O APARELHO?', choices(state, 'accessories', ['Caixa', 'Cabo', 'Nota fiscal']) +
             `<button type="button" class="choice${state.accessories.length ? '' : ' selected'}" id="noAccessories"><strong>Nenhum</strong><span class="radio"></span></button>`);
-        extra = '<button type="button" class="secondary" id="noNotes">NÃO TENHO OBSERVAÇÕES</button>';
+        extra = '<button type="button" class="btn ghost" id="noNotes">NÃO TENHO OBSERVAÇÕES</button>';
         break;
       case 11:
         title = 'Estamos quase lá. 🔥';
         subtitle = 'Deixe seus dados para identificarmos a avaliação e entrarmos em contato.';
         body = field('NOME COMPLETO', `<input aria-label="Nome completo" id="name" maxlength="120" autocomplete="name" value="${escapeHtml(state.name)}" placeholder="Seu nome">`) +
-          field('WHATSAPP', `<input aria-label="WhatsApp" id="phone" maxlength="25" autocomplete="tel" value="${escapeHtml(state.phone)}" placeholder="(71) 99999-9999" inputmode="tel">`) +
+          field('WHATSAPP', `<input aria-label="WhatsApp" id="phone" maxlength="15" autocomplete="tel-national" type="tel" value="${escapeHtml(maskPhone(state.phone))}" placeholder="(71) 99999-9999" inputmode="tel">`) +
           field('COMO PREFERE SER ATENDIDO?', choices(state, 'service', ['WhatsApp', 'Loja física'])) +
           '<div class="note">Ao continuar, você confirma que as informações fornecidas são verdadeiras e autoriza a Gringas a utilizá-las nesta avaliação.</div>';
         break;
@@ -360,16 +400,17 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
         <div class="summary-row"><span>📦 Acompanha</span><b>${escapeHtml(record.accessories.join(', ') || 'Somente aparelho')}</b></div>
         <div class="summary-notes"><span>📝 Observações</span><p>${escapeHtml(record.notes || 'Nenhuma observação.')}</p></div>
       </div>
-      <div class="footer-actions result-actions"><button type="button" class="primary gold" id="upgrade">QUERO FAZER MEU UPGRADE →</button>
-        <button type="button" class="secondary" id="diagnostic">VER DIAGNÓSTICO DO CÁLCULO</button>
-        <button type="button" class="secondary" id="edit">VOLTAR E EDITAR</button>
-        <a class="secondary" href="${escapeHtml(whatsappUrl(message))}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">FALAR COM A GRINGAS →</a></div>
+      <div class="footer-actions result-actions"><button type="button" class="btn primary gold" id="upgrade">QUERO FAZER MEU UPGRADE →</button>
+        <button type="button" class="btn ghost" id="diagnostic">VER DIAGNÓSTICO DO CÁLCULO</button>
+        <button type="button" class="btn ghost" id="edit">VOLTAR E EDITAR</button>
+        <a class="btn whatsapp" href="${escapeHtml(whatsappUrl(message))}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">FALAR COM A GRINGAS →</a></div>
       <p class="legal">Valor estimado com base nas informações fornecidas. O WhatsApp abre somente ao clicar e a mensagem não inclui links das fotos.</p></section>`;
 
     root.querySelector('#edit').addEventListener('click', () => {
       state.evaluationId = '';
       state.step = 11;
       record = null;
+      pushNavigation('wizard', 11);
       render();
     });
     root.querySelector('#diagnostic').addEventListener('click', renderDiagnostic);
@@ -388,116 +429,87 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
       ${calculation.isManual
         ? `<div class="manual-reasons"><b>Encaminhado para análise manual porque:</b>${calculation.manual.map(reason => `<span>• ${escapeHtml(reason)}</span>`).join('')}</div>`
         : '<div class="success-note">✓ Nenhuma regra de análise manual foi acionada.</div>'}
-      <div class="footer-actions"><button type="button" class="primary" id="backResult">VOLTAR AO RESULTADO →</button></div></section>`;
+      <div class="footer-actions"><button type="button" class="btn primary" id="backResult">VOLTAR AO RESULTADO →</button></div></section>`;
     root.querySelector('#backResult').addEventListener('click', renderResult);
   }
 
-  function showUpgrade() {
-    closeUpgrade?.();
-    const previousFocus = document.activeElement;
-    const modal = document.createElement('div');
-    modal.className = 'v54-overlay';
-    modal.setAttribute('role', 'dialog');
-    modal.setAttribute('aria-modal', 'true');
-    modal.setAttribute('aria-label', 'Escolha seu próximo iPhone');
-    modal.innerHTML = `<div class="v54-shell"><div class="v54-top"><button class="v54-back" type="button" aria-label="Voltar ao resultado">←</button>
-      <div><strong>GRINGAS</strong><span>TROCA</span></div><span class="v54-code">${escapeHtml(record.id)}</span></div>
-      <div class="v54-progress"><i></i></div><div class="v54-content"><div class="v54-kicker">SEU UPGRADE</div>
-      <h2>Agora escolha seu próximo iPhone.</h2><p class="v54-sub">Seu aparelho entra com crédito estimado de <strong>${money(record.calculation.estimated)}</strong>.</p>
-      <div class="v54-products"></div><div class="v54-summary" hidden></div><p class="note" data-error role="alert" hidden></p>
-      <button type="button" class="v54-continue" disabled>CONTINUAR →</button>
-      <p class="v54-note">Valores e parcelamento demonstrativos, sujeitos à confirmação da Gringas.</p></div></div>`;
-    document.body.appendChild(modal);
-
+  function showUpgrade({ push = true } = {}) {
+    currentView = 'upgrade';
+    if (push) pushNavigation('upgrade', 12);
     let selected = record.upgrade?.productId || '';
-    const products = modal.querySelector('.v54-products');
-    const summary = modal.querySelector('.v54-summary');
-    const continueButton = modal.querySelector('.v54-continue');
-    const close = () => {
-      modal.remove();
-      previousFocus?.focus();
-      if (closeUpgrade === close) closeUpgrade = null;
+
+    const draw = () => {
+      const value = selected ? calculateUpgrade(selected, record.calculation.estimated) : null;
+      root.innerHTML = `<section class="screen upgrade-screen"><span class="pill">SEU UPGRADE</span>
+        <h1 class="question">Escolha seu próximo iPhone.</h1>
+        <div class="screen-body"><div class="credit-chip"><span>Crédito do seu ${escapeHtml(record.device.model)}</span><b>${money(record.calculation.estimated)}</b></div>
+        <div class="products">${catalog.upgradeProducts.map(product => `<button type="button" class="product${selected === product.id ? ' selected' : ''}" data-product="${escapeHtml(product.id)}" aria-pressed="${selected === product.id}">
+          <span class="mini-phone" aria-hidden="true"></span><div class="product-info"><strong>${escapeHtml(product.name)}</strong><small>${product.price === null ? 'A equipe ajuda você a escolher' : `${escapeHtml(product.storage)} • ${money(product.price)}`}</small></div>
+          ${product.price === null ? '' : `<div class="product-diff"><small>${Math.max(0, product.price - record.calculation.estimated) ? 'você completa' : 'seu crédito'}</small><b>${Math.max(0, product.price - record.calculation.estimated) ? money(Math.max(0, product.price - record.calculation.estimated)) : 'cobre tudo'}</b></div>`}<span class="radio" aria-hidden="true"></span></button>`).join('')}</div>
+        ${value ? `<div class="deal-card" aria-live="polite">${value.price === null ? `<p class="deal-help">Sem problema! A equipe da Gringas ajuda você a escolher.</p>` : `<div class="deal-row"><span>${escapeHtml(value.productName)} ${escapeHtml(value.storage)}</span><b>${money(value.price)}</b></div><div class="deal-row credit"><span>Seu iPhone como entrada</span><b>− ${money(Math.min(value.tradeValue, value.price))}</b></div><div class="deal-total"><span class="value-label">${value.difference > 0 ? 'VOCÊ COMPLETA' : 'SALDO ESTIMADO'}</span><div class="deal-amount">${money(value.difference > 0 ? value.difference : value.creditOver)}</div>${value.difference > 0 ? `<div class="deal-installment">ou em até <b>12x de ${installment(value.installment)}</b>*</div>` : ''}</div>`}</div>` : ''}</div>
+        <p class="note" data-error role="alert" hidden></p><div class="footer-actions"><button type="button" class="btn primary" id="confirmUpgrade"${selected ? '' : ' disabled'}>${selected ? 'CONTINUAR →' : 'ESCOLHA UM IPHONE →'}</button></div>
+        <p class="legal">*Simulação. Preços, parcelamento e valor final da troca são confirmados pela Gringas no atendimento.</p></section>`;
+      root.querySelectorAll('[data-product]').forEach(button => button.addEventListener('click', () => {
+        selected = button.dataset.product;
+        draw();
+      }));
+      root.querySelector('#confirmUpgrade')?.addEventListener('click', confirm);
     };
-    closeUpgrade = close;
-    modal.querySelector('.v54-back').addEventListener('click', close);
-    modal.addEventListener('keydown', event => {
-      if (event.key === 'Escape') close();
-    });
 
-    function renderUpgradeSummary() {
-      const value = calculateUpgrade(selected, record.calculation.estimated);
-      summary.hidden = false;
-      summary.innerHTML = value.price === null
-        ? '<div class="v54-summary-title">Ainda não decidiu?</div><p>Sem problema. A equipe Gringas pode ajudar você a escolher.</p>'
-        : `<div class="v54-summary-title">Sua troca</div>
-          <div class="v54-row"><span>${escapeHtml(value.productName)} ${escapeHtml(value.storage)}</span><strong>${money(value.price)}</strong></div>
-          <div class="v54-row credit"><span>Seu iPhone como entrada</span><strong>− ${money(Math.min(value.tradeValue, value.price))}</strong></div>
-          <div class="v54-divider"></div><div class="v54-paylabel">${value.difference > 0 ? 'VOCÊ COMPLETA' : 'SALDO ESTIMADO'}</div>
-          <div class="v54-difference">${money(value.difference > 0 ? value.difference : value.creditOver)}</div>
-          ${value.difference > 0 ? `<div class="v54-or">ou <strong>12x de ${installment(value.installment)}</strong>*</div>` : ''}
-          <div class="v54-disclaimer">*Simulação ilustrativa, sujeita à confirmação.</div>`;
-      continueButton.disabled = false;
-    }
-
-    for (const product of catalog.upgradeProducts) {
-      const productButton = document.createElement('button');
-      productButton.type = 'button';
-      productButton.className = `v54-product${selected === product.id ? ' active' : ''}`;
-      productButton.innerHTML = `<div><strong>${escapeHtml(product.name)}</strong><span>${escapeHtml(product.storage)}</span></div>
-        <div class="v54-product-price">${product.price === null ? 'Quero ajuda' : money(product.price)}<small>${product.price === null ? '' : 'demonstrativo'}</small></div>`;
-      productButton.addEventListener('click', () => {
-        selected = product.id;
-        [...products.children].forEach(item => item.classList.toggle('active', item === productButton));
-        showError(modal, '');
-        renderUpgradeSummary();
-      });
-      products.appendChild(productButton);
-    }
-    if (selected) renderUpgradeSummary();
-
-    continueButton.addEventListener('click', async () => {
-      if (!selected || continueButton.disabled) return;
-      continueButton.disabled = true;
+    const confirm = async () => {
+      if (!selected) return;
+      const control = root.querySelector('#confirmUpgrade');
+      control.disabled = true;
       try {
         record = await saveUpgrade(record, selected);
         const value = record.upgrade;
         const message = `Olá, Gringas! Quero continuar meu upgrade. Avaliação: ${record.id}. Crédito estimado: ${money(value.tradeValue)}. Interesse: ${value.productName} ${value.storage}.${value.difference === null ? '' : ` Diferença estimada: ${money(value.difference)}.`}`;
-        modal.querySelector('.v54-content').innerHTML = `<div class="v54-successmark">✓</div><div class="v54-kicker">UPGRADE SELECIONADO</div>
-          <h2>${value.productId === 'undecided' ? 'Vamos ajudar você a escolher.' : 'Seu próximo iPhone está ainda mais perto.'}</h2>
-          <div class="v54-final-card"><div class="v54-final-code">Avaliação <strong>${escapeHtml(record.id)}</strong></div>
-            <div class="v54-final-line"><span>Crédito estimado</span><strong>${money(value.tradeValue)}</strong></div>
-            <div class="v54-final-line"><span>Interesse</span><strong>${escapeHtml(value.productName)} ${escapeHtml(value.storage)}</strong></div>
-            ${value.difference === null ? '' : `<div class="v54-final-highlight"><span>Diferença estimada</span><strong>${money(value.difference)}</strong><small>ou 12x de ${installment(value.installment)}*</small></div>`}</div>
-          <a class="v54-whatsapp" href="${escapeHtml(whatsappUrl(message))}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">FALAR COM A GRINGAS →</a>
-          <button type="button" class="v54-secondary">VOLTAR AO RESULTADO</button>
-          <p class="v54-note">O interesse não é atualizado diretamente no banco pelo visitante. Continue pelo WhatsApp; ele abre somente ao clicar e não recebe links das fotos.</p>`;
-        modal.querySelector('.v54-secondary').addEventListener('click', close);
-        modal.querySelector('.v54-whatsapp').focus();
+        root.innerHTML = `<section class="screen upgrade-screen"><div class="screen-body"><div class="success-note">✓ UPGRADE SELECIONADO</div><h1 class="question">${value.productId === 'undecided' ? 'Vamos ajudar você a escolher.' : 'Seu próximo iPhone está ainda mais perto.'}</h1><div class="deal-card"><div class="deal-row"><span>Crédito estimado</span><b>${money(value.tradeValue)}</b></div><div class="deal-row"><span>Interesse</span><b>${escapeHtml(value.productName)} ${escapeHtml(value.storage)}</b></div>${value.difference === null ? '' : `<div class="deal-total"><span>Diferença estimada</span><div class="deal-amount">${money(value.difference)}</div></div>`}</div></div><div class="footer-actions"><a class="btn whatsapp" href="${escapeHtml(whatsappUrl(message))}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">CONTINUAR NO WHATSAPP →</a><button type="button" class="btn ghost" id="backResult">VOLTAR AO RESULTADO</button></div><p class="legal">O WhatsApp abre somente ao clicar e a mensagem não inclui links das fotos.</p></section>`;
+        root.querySelector('#backResult').addEventListener('click', () => globalThis.history.back());
       } catch (error) {
-        showError(modal, error.message || 'Não foi possível salvar o upgrade.');
-        continueButton.disabled = false;
+        showError(root, error.message || 'Não foi possível salvar o upgrade.');
+        control.disabled = false;
       }
-    });
-    modal.querySelector('.v54-back').focus();
+    };
+    draw();
+    globalThis.scrollTo?.(0, 0);
   }
 
   function render() {
-    if (back) back.classList.toggle('hidden', state.step === 1 || state.step === 12);
-    if (state.step === 12 && record) renderResult();
-    else renderStep();
+    if (back) back.classList.toggle('hidden', state.step === 1);
+    document.body.dataset.view = currentView;
+    if (currentView === 'upgrade' && record) showUpgrade({ push: false });
+    else if (state.step === 12 && record) {
+      currentView = 'result';
+      renderResult();
+    } else {
+      currentView = 'wizard';
+      renderStep();
+    }
   }
 
-  if (back) {
-    back.addEventListener('click', () => {
-      if (state.step > 1 && state.step <= TOTAL_STEPS) {
-        state.step -= 1;
-        render();
-      } else if (state.step === 1) {
-        globalThis.location.href = 'index.html';
-      }
-    });
-  }
-  restart?.addEventListener('click', reset);
+  globalThis.addEventListener?.('popstate', event => {
+    const navigation = event.state;
+    if (!navigation?.gringasEvaluation) {
+      globalThis.location.href = 'index.html';
+      return;
+    }
+    currentView = navigation.view;
+    state.step = navigation.step;
+    if (currentView === 'wizard' && state.step === TOTAL_STEPS && record) {
+      state.evaluationId = '';
+      record = null;
+    }
+    render();
+    globalThis.scrollTo?.(0, 0);
+  });
+
+  if (back) back.addEventListener('click', () => globalThis.history.back());
+  restart?.addEventListener('click', () => {
+    if (state.step > 1 && currentView === 'wizard' && !globalThis.confirm('Recomeçar a avaliação do início?')) return;
+    reset();
+  });
+  pushNavigation('wizard', 1, { replace: true });
   render();
 
   return () => {

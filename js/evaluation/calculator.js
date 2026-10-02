@@ -19,7 +19,9 @@ const deviceEntries = [
   ['iPhone 16 Pro Max', 5350, ['256 GB', '512 GB', '1 TB']],
   ['iPhone 17', 4300, ['256 GB', '512 GB']],
   ['iPhone 17 Pro', 5700, ['256 GB', '512 GB', '1 TB']],
-  ['iPhone 17 Pro Max', 6500, ['256 GB', '512 GB', '1 TB']],
+  ['iPhone 17 Pro Max', 6500, ['256 GB', '512 GB', '1 TB', '2 TB']],
+  ['iPhone 18 Pro', 6900, ['256 GB', '512 GB', '1 TB']],
+  ['iPhone 18 Pro Max', 7800, ['256 GB', '512 GB', '1 TB', '2 TB']],
 ];
 
 const models = Object.freeze(deviceEntries.map(([model]) => model));
@@ -44,7 +46,7 @@ export const catalog = Object.freeze({
 });
 
 export const rules = Object.freeze({
-  storageBonus: Object.freeze({ '64 GB': 0, '128 GB': 100, '256 GB': 250, '512 GB': 500, '1 TB': 800 }),
+  storageBonus: Object.freeze({ '64 GB': 0, '128 GB': 100, '256 GB': 250, '512 GB': 500, '1 TB': 800, '2 TB': 1200 }),
   conditionDiscount: Object.freeze({ Excelente: 0, Bom: 100, Regular: 300, Danificado: 0 }),
   screenDiscount: Object.freeze({
     'Sim, perfeitamente': 0,

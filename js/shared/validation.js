@@ -70,8 +70,11 @@ export function validateStep(state, step = state?.step) {
         ? '' : 'Responda às duas perguntas sobre manutenção e peças.';
     case 8:
       if (!answers.includes(state.warranty)) return 'Informe a garantia.';
-      if (state.warranty === 'Sim' && (!validDate(state.warrantyDate) || !answers.includes(state.appleCare))) {
-        return 'Informe uma data válida de garantia e responda sobre AppleCare+.';
+      if (state.warranty === 'Sim' && state.warrantyDate && !validDate(state.warrantyDate)) {
+        return 'Informe uma data válida de garantia.';
+      }
+      if (state.warranty === 'Sim' && state.appleCare && !answers.includes(state.appleCare)) {
+        return 'Revise a informação sobre AppleCare+.';
       }
       return '';
     case 9:
@@ -82,9 +85,14 @@ export function validateStep(state, step = state?.step) {
         ? '' : 'Revise as observações (até 500 caracteres) e acessórios.';
     case 11: {
       const name = typeof state.name === 'string' ? state.name.trim() : '';
+      const nameParts = name.split(/\s+/).filter(part => /^\p{L}[\p{L}'’-]+$/u.test(part) && part.length >= 2);
       const digits = typeof state.phone === 'string' ? state.phone.replace(/\D/g, '') : '';
-      if (name.length < 2 || name.length > 120) return 'Informe seu nome (2 a 120 caracteres).';
-      if (!/^(?:55)?[1-9]\d\d{8,9}$/.test(digits)) return 'Informe um telefone brasileiro válido com DDD.';
+      if (name.length > 120 || nameParts.length < 2 || /[0-9@#$%*_=+<>{}[\]\\/|]/.test(name)) {
+        return 'Informe nome e sobrenome usando apenas letras.';
+      }
+      if (!/^[1-9][1-9]\d{8,9}$/.test(digits) || (digits.length === 11 && digits[2] !== '9') || /^(\d)\1+$/.test(digits.slice(2))) {
+        return 'Informe um celular brasileiro válido com DDD.';
+      }
       return ['WhatsApp', 'Loja física'].includes(state.service) ? '' : 'Escolha a preferência de atendimento.';
     }
     default:
