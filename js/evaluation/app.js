@@ -105,6 +105,38 @@ function maskPhone(value) {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
+// Modal de confirmação no visual da Gringas, no lugar do confirm() do navegador.
+// O <dialog> com showModal() já prende o foco, fecha com Esc e bloqueia o fundo.
+// Resolve true só quando a pessoa escolhe "Recomeçar".
+function confirmarRecomeco(doc) {
+  const Dialog = doc.defaultView?.HTMLDialogElement;
+  if (!Dialog || typeof Dialog.prototype.showModal !== 'function') {
+    return Promise.resolve(globalThis.confirm('Recomeçar a avaliação do início?'));
+  }
+  return new Promise((resolve) => {
+    const dialog = doc.createElement('dialog');
+    dialog.className = 'confirm-modal';
+    dialog.setAttribute('aria-labelledby', 'confirmModalTitle');
+    dialog.setAttribute('aria-describedby', 'confirmModalText');
+    dialog.innerHTML = `
+      <form method="dialog" class="confirm-modal__box">
+        <h2 id="confirmModalTitle">Recomeçar a avaliação?</h2>
+        <p id="confirmModalText">As respostas que você já marcou serão apagadas e a avaliação volta para o início.</p>
+        <div class="confirm-modal__actions">
+          <button type="submit" value="cancel" class="btn ghost small" autofocus>Cancelar</button>
+          <button type="submit" value="ok" class="btn primary small">Recomeçar</button>
+        </div>
+      </form>`;
+    // clique fora da caixa (no fundo escurecido) cancela
+    dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close('cancel'); });
+    dialog.addEventListener('close', () => {
+      resolve(dialog.returnValue === 'ok');
+      dialog.remove();
+    }, { once: true });
+    doc.body.append(dialog);
+    dialog.showModal();
+  });
+}
 
 export function mountEvaluationApp({ document = globalThis.document } = {}) {
   const root = document?.getElementById('screen');
@@ -558,8 +590,8 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
   });
 
   if (back) back.addEventListener('click', () => globalThis.history.back());
-  restart?.addEventListener('click', () => {
-    if (state.step > 1 && currentView === 'wizard' && !globalThis.confirm('Recomeçar a avaliação do início?')) return;
+  restart?.addEventListener('click', async () => {
+    if (state.step > 1 && currentView === 'wizard' && !(await confirmarRecomeco(document))) return;
     reset();
   });
   pushNavigation('wizard', 1, { replace: true });
