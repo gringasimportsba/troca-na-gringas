@@ -3,162 +3,231 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Gringas Troca — Troque seu iPhone por um novo</title>
-  <link rel="stylesheet" href="landing.css">
+  <title>Troca de iPhone em Salvador | Gringas Troca — Avalie seu iPhone online</title>
+  <meta name="description" content="Descubra em poucos minutos quanto seu iPhone vale na troca por um novo. Avaliação online, gratuita e sem compromisso na Gringas, do iPhone 11 ao 18.">
+  <meta name="theme-color" content="#080909">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://troca-na-gringas.vercel.app/">
+
+  <!-- Favicon -->
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+
+  <!-- Open Graph / WhatsApp / Instagram.
+       Se o site ganhar domínio próprio, troque o endereço em og:url, og:image, twitter:image e canonical. -->
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:site_name" content="Gringas Troca">
+  <meta property="og:title" content="Troque seu iPhone por um novo | Gringas Troca">
+  <meta property="og:description" content="Avalie seu iPhone online em poucos minutos e descubra quanto ele vale como entrada no seu próximo iPhone.">
+  <meta property="og:url" content="https://troca-na-gringas.vercel.app/">
+  <meta property="og:image" content="https://troca-na-gringas.vercel.app/assets/og-image.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Gringas Troca — descubra quanto vale seu iPhone na troca">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Troque seu iPhone por um novo | Gringas Troca">
+  <meta name="twitter:description" content="Avalie seu iPhone online e descubra quanto ele vale na troca.">
+  <meta name="twitter:image" content="https://troca-na-gringas.vercel.app/assets/og-image.jpg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Montserrat:wght@700;800;900&family=Great+Vibes&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="landing.css?v=62">
+  <link rel="preload" as="image" href="assets/logo-gringas-white.png">
 </head>
 <body>
 
   <!-- ===== HEADER ===== -->
   <header class="lp-header">
     <div class="lp-header-inner">
-      <div class="lp-brand">
-        <span class="lp-crown">&#9819;</span>
-        <div>
-          <b>GRINGAS</b>
-          <small>TROCA</small>
-        </div>
-      </div>
-      <a class="lp-wa-btn" href="https://wa.me/5571999498939" target="_blank" rel="noopener" aria-label="Contato via WhatsApp">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-        </svg>
-        <span>WhatsApp</span>
+      <a class="lp-brand" href="index.html" aria-label="Gringas Imports — Troca, início">
+        <img class="lp-logo" src="assets/logo-gringas-white.png" alt="Gringas Imports" width="340" height="160">
+        <span class="lp-brand-tag">TROCA</span>
       </a>
+      <div class="lp-header-actions">
+        <button class="lp-menu-btn" id="menuBtn" type="button" aria-label="Abrir menu" aria-expanded="false" aria-controls="siteMenu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
     </div>
+    <nav class="lp-menu" id="siteMenu" hidden>
+      <a href="#beneficios">Por que a Gringas</a>
+      <a href="#modelos">Modelos aceitos</a>
+      <a href="#como-funciona">Como funciona</a>
+      <a href="avaliar.html" class="lp-menu-cta">Avaliar meu iPhone →</a>
+    </nav>
   </header>
 
-  <!-- ===== HERO ===== -->
-  <section class="lp-hero">
-    <div class="lp-hero-inner">
-      <div class="lp-hero-copy">
-        <span class="lp-pill">TROCA NA GRINGAS</span>
-        <h1>Troque seu iPhone<br>por um novo.</h1>
-        <p>Descubra agora quanto ele pode valer na troca pelo seu pr&oacute;ximo iPhone.</p>
-        <a class="lp-cta" href="avaliar.html">AVALIAR MEU IPHONE <span>&#8594;</span></a>
-      </div>
-
-      <!-- 3 iPhones decorativos -->
-      <div class="lp-phones">
-        <div class="lp-phone lp-phone-duo">
-          <div class="lp-camera lp-cam-duo"></div>
-          <span>iPhone 18<br><b>DUO</b></span>
+  <main>
+    <!-- ===== HERO ===== -->
+    <section class="lp-hero" aria-labelledby="hero-title">
+      <div class="lp-hero-light" aria-hidden="true"></div>
+      <div class="lp-container lp-hero-inner">
+        <div class="lp-hero-copy">
+          <span class="lp-kicker">SEU IPHONE AINDA VALE.</span>
+          <h1 id="hero-title">Troque seu iPhone por <span class="lp-gold-text">um novo.</span></h1>
+          <p>Descubra agora quanto ele pode valer na troca pelo seu pr&oacute;ximo iPhone.</p>
+          <a class="lp-cta" href="avaliar.html">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg>
+            AVALIAR MEU IPHONE <span aria-hidden="true">&#8594;</span>
+          </a>
+          <ul class="lp-hero-features">
+            <li>
+              <span class="lp-ring" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z"/></svg></span>
+              Avalia&ccedil;&atilde;o em poucos minutos
+            </li>
+            <li>
+              <span class="lp-ring" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4 6v6c0 4.5 3.4 8.3 8 9 4.6-.7 8-4.5 8-9V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg></span>
+              Sem compromisso
+            </li>
+            <li>
+              <span class="lp-ring" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v9H3zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg></span>
+              Use como entrada na Gringas
+            </li>
+          </ul>
         </div>
-        <div class="lp-phone lp-phone-pro">
-          <div class="lp-camera lp-cam-pro"></div>
-          <span>iPhone 18<br><b>PRO</b></span>
+
+        <!-- iPhones decorativos -->
+        <div class="lp-stage" aria-hidden="true">
+          <figure class="lp-device lp-device-1">
+            <figcaption>iPhone 18</figcaption>
+            <img src="assets/phones/iphone-18.svg" alt="" width="312" height="620">
+          </figure>
+          <figure class="lp-device lp-device-2">
+            <figcaption>iPhone 18<b>PRO</b></figcaption>
+            <img src="assets/phones/iphone-18-pro.svg" alt="" width="312" height="620">
+          </figure>
+          <figure class="lp-device lp-device-3">
+            <figcaption>iPhone 18<b>PRO MAX</b></figcaption>
+            <img src="assets/phones/iphone-18-pro-max.svg" alt="" width="312" height="620">
+          </figure>
+          <span class="lp-script">O novo<br>te espera.</span>
+          <div class="lp-floor"></div>
         </div>
-        <div class="lp-phone lp-phone-promax">
-          <div class="lp-camera lp-cam-promax"></div>
-          <span>iPhone 18<br><b>PRO MAX</b></span>
-        </div>
-        <div class="lp-glow"></div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ===== BENEFÍCIOS ===== -->
-  <section class="lp-benefits">
-    <div class="lp-section-inner">
-      <div class="lp-benefit-card">
-        <div class="lp-benefit-icon">&#9878;</div>
-        <strong>Avalia&ccedil;&atilde;o Justa</strong>
-        <p>Pre&ccedil;os baseados no mercado real, sem surpresas na hora da troca.</p>
-      </div>
-      <div class="lp-benefit-card">
-        <div class="lp-benefit-icon">&#128274;</div>
-        <strong>Processo Seguro</strong>
-        <p>Seus dados e aparelho protegidos em todas as etapas.</p>
-      </div>
-      <div class="lp-benefit-card">
-        <div class="lp-benefit-icon">&#129309;</div>
-        <strong>Atendimento Especializado</strong>
-        <p>Equipe dedicada pronta para ajudar voc&ecirc; a fazer o melhor neg&oacute;cio.</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== MODELOS ACEITOS ===== -->
-  <section class="lp-models">
-    <div class="lp-section-inner">
-      <div class="lp-models-text">
-        <span class="lp-section-label">MODELOS ACEITOS NA TROCA</span>
-        <h2>Do iPhone 11 ao mais novo.</h2>
-        <p>Seu iPhone ainda vale. Fa&ccedil;a uma avalia&ccedil;&atilde;o e descubra.</p>
-      </div>
-      <div class="lp-model-grid">
-        <span>iPhone 11</span>
-        <span>iPhone 12</span>
-        <span>iPhone 13</span>
-        <span>iPhone 14</span>
-        <span>iPhone 15</span>
-        <span>iPhone 16</span>
-        <span>iPhone 17</span>
-        <span>iPhone 18</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- ===== COMO FUNCIONA ===== -->
-  <section class="lp-how">
-    <div class="lp-section-inner">
-      <span class="lp-section-label">COMO FUNCIONA</span>
-      <h2>Simples, r&aacute;pido e sem complica&ccedil;&atilde;o.</h2>
-      <div class="lp-steps">
-        <div class="lp-step">
-          <div class="lp-step-num">1</div>
-          <div>
-            <strong>Informe os dados</strong>
-            <p>Preencha o modelo, capacidade e estado do seu aparelho.</p>
+    <!-- ===== BENEFÍCIOS ===== -->
+    <section class="lp-section" id="beneficios" aria-labelledby="benefits-title">
+      <div class="lp-container">
+        <div class="lp-benefits-card">
+          <div class="lp-benefits-intro">
+            <span class="lp-section-label">GRINGAS TROCA</span>
+            <h2 id="benefits-title">Seu iPhone ainda vale.</h2>
+            <p>Transforme seu iPhone atual em uma nova experi&ecirc;ncia. Avalia&ccedil;&atilde;o r&aacute;pida, transparente e segura.</p>
+            <a class="lp-link" href="#como-funciona">SABER MAIS <span aria-hidden="true">&#8594;</span></a>
           </div>
-        </div>
-        <div class="lp-step-divider"></div>
-        <div class="lp-step">
-          <div class="lp-step-num">2</div>
-          <div>
-            <strong>Envie as fotos</strong>
-            <p>Tire fotos da frente e traseira diretamente pelo celular.</p>
-          </div>
-        </div>
-        <div class="lp-step-divider"></div>
-        <div class="lp-step">
-          <div class="lp-step-num">3</div>
-          <div>
-            <strong>Receba sua avalia&ccedil;&atilde;o</strong>
-            <p>A Gringas entra em contato com a proposta de troca.</p>
-          </div>
+          <ul class="lp-benefits">
+            <li>
+              <span class="lp-ring" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M9 20V6M14 20v-8M19 20V4"/></svg></span>
+              <h3>Valoriza&ccedil;&atilde;o justa</h3>
+              <p>Com base no modelo, armazenamento e estado de conserva&ccedil;&atilde;o.</p>
+            </li>
+            <li>
+              <span class="lp-ring" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>
+              <h3>Processo seguro</h3>
+              <p>Seus dados sempre protegidos.</p>
+            </li>
+            <li>
+              <span class="lp-ring" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.6 5.6 6 .7-4.5 4.1 1.2 6L12 16.4 6.7 19.4l1.2-6L3.4 9.3l6-.7L12 3Z"/></svg></span>
+              <h3>Atendimento especializado</h3>
+              <p>Time Gringas pronto para te ajudar.</p>
+            </li>
+          </ul>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ===== CTA FINAL ===== -->
-  <section class="lp-final-cta">
-    <div class="lp-section-inner lp-final-cta-inner">
-      <span class="lp-pill">SEU PR&Oacute;XIMO IPHONE EST&Aacute; MAIS PERTO</span>
-      <h2>Pronto para fazer seu upgrade?</h2>
-      <p>Avalie agora e descubra quanto o seu iPhone pode valer na troca.</p>
-      <a class="lp-cta" href="avaliar.html">AVALIAR MEU IPHONE <span>&#8594;</span></a>
-      <p class="lp-legal">Avalia&ccedil;&atilde;o inicial sem compromisso. O valor final ser&aacute; confirmado ap&oacute;s an&aacute;lise f&iacute;sica do aparelho pela Gringas.</p>
-    </div>
-  </section>
+    <!-- ===== MODELOS ACEITOS ===== -->
+    <section class="lp-section" id="modelos" aria-labelledby="models-title">
+      <div class="lp-container">
+        <div class="lp-models-card">
+          <span class="lp-section-label">MODELOS ACEITOS</span>
+          <h2 id="models-title">Troque a partir do iPhone 11.</h2>
+          <p>Aceitamos iPhones a partir do modelo 11, incluindo Pro e Pro Max. Quanto mais novo o modelo, maior o valor da sua troca.</p>
+          <ul class="lp-model-row">
+            <li><img src="assets/phones/iphone-11.svg" alt="" width="312" height="620" loading="lazy">iPhone 11</li>
+            <li><img src="assets/phones/iphone-12.svg" alt="" width="312" height="620" loading="lazy">iPhone 12</li>
+            <li><img src="assets/phones/iphone-13.svg" alt="" width="312" height="620" loading="lazy">iPhone 13</li>
+            <li><img src="assets/phones/iphone-14.svg" alt="" width="312" height="620" loading="lazy">iPhone 14</li>
+            <li><img src="assets/phones/iphone-15.svg" alt="" width="312" height="620" loading="lazy">iPhone 15</li>
+            <li><img src="assets/phones/iphone-16.svg" alt="" width="312" height="620" loading="lazy">iPhone 16</li>
+            <li><img src="assets/phones/iphone-17.svg" alt="" width="312" height="620" loading="lazy">iPhone 17</li>
+            <li><img src="assets/phones/iphone-18.svg" alt="" width="312" height="620" loading="lazy">iPhone 18</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== COMO FUNCIONA ===== -->
+    <section class="lp-section" id="como-funciona" aria-labelledby="how-title">
+      <div class="lp-container lp-center">
+        <span class="lp-section-label">COMO FUNCIONA</span>
+        <h2 id="how-title">Seu novo iPhone em 3 passos.</h2>
+        <ol class="lp-steps">
+          <li class="lp-step">
+            <span class="lp-step-num" aria-hidden="true">01</span>
+            <div class="lp-step-card">
+              <span class="lp-ring" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg></span>
+              <div><h3>Informe os dados</h3><p>Preencha as informa&ccedil;&otilde;es do seu iPhone.</p></div>
+            </div>
+          </li>
+          <li class="lp-step">
+            <span class="lp-step-num" aria-hidden="true">02</span>
+            <div class="lp-step-card">
+              <span class="lp-ring" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
+              <div><h3>Envie as fotos</h3><p>Fotos reais para uma avalia&ccedil;&atilde;o mais precisa.</p></div>
+            </div>
+          </li>
+          <li class="lp-step">
+            <span class="lp-step-num" aria-hidden="true">03</span>
+            <div class="lp-step-card">
+              <span class="lp-ring" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg></span>
+              <div><h3>Receba sua avalia&ccedil;&atilde;o</h3><p>Em poucos minutos, voc&ecirc; saber&aacute; quanto ele vale na troca.</p></div>
+            </div>
+          </li>
+        </ol>
+        <a class="lp-cta" href="avaliar.html">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg>
+          AVALIAR MEU IPHONE <span aria-hidden="true">&#8594;</span>
+        </a>
+        <p class="lp-legal">Avalia&ccedil;&atilde;o inicial sem compromisso. O valor final &eacute; confirmado ap&oacute;s an&aacute;lise f&iacute;sica do aparelho pela Gringas.</p>
+      </div>
+    </section>
+  </main>
 
   <!-- ===== FOOTER ===== -->
   <footer class="lp-footer">
-    <div class="lp-footer-inner">
-      <div class="lp-brand lp-brand-sm">
-        <span class="lp-crown">&#9819;</span>
-        <div><b>GRINGAS</b><small>TROCA</small></div>
-      </div>
-      <p>&copy; 2026 Gringas Troca. Todos os direitos reservados.</p>
+    <div class="lp-container lp-footer-inner">
+      <img class="lp-logo lp-logo-sm" src="assets/logo-gringas-white.png" alt="Gringas Imports" width="340" height="160" loading="lazy">
+      <p>&copy; 2026 Gringas Imports. Todos os direitos reservados.</p>
     </div>
   </footer>
 
-  <!-- ===== FAB WHATSAPP (sempre visível) ===== -->
-  <a class="lp-wa-fab" href="https://wa.me/5571999498939" target="_blank" rel="noopener" aria-label="Falar no WhatsApp">
-    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-    </svg>
+  <!-- ===== FAB WHATSAPP ===== -->
+  <a class="lp-wa-fab" href="https://wa.me/5571999498939?text=Ol%C3%A1%2C%20Gringas!%20Quero%20saber%20mais%20sobre%20a%20troca%20do%20meu%20iPhone." target="_blank" rel="noopener" aria-label="Falar com a Gringas no WhatsApp">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#i-whatsapp"/></svg>
   </a>
 
+  <!-- Ícones reutilizáveis -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-whatsapp" viewBox="0 0 24 24">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+    </symbol>
+  </svg>
+
+  <script>
+    // Menu do header (hambúrguer)
+    (function(){
+      var btn=document.getElementById('menuBtn'),menu=document.getElementById('siteMenu');
+      function set(open){menu.hidden=!open;btn.setAttribute('aria-expanded',open);btn.classList.toggle('open',open)}
+      btn.addEventListener('click',function(){set(menu.hidden)});
+      menu.addEventListener('click',function(e){if(e.target.tagName==='A')set(false)});
+      document.addEventListener('keydown',function(e){if(e.key==='Escape')set(false)});
+    })();
+  </script>
 </body>
 </html>
