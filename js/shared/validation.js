@@ -79,8 +79,9 @@ export function validateStep(state, step = state?.step) {
       }
       return '';
     case 9:
-      return state.photos && state.photos.front && state.photos.back
-        ? '' : 'Envie as fotos da frente e traseira.';
+      // Fotos opcionais: só garante que o container existe (pode estar vazio).
+      return state.photos && typeof state.photos === 'object' && !Array.isArray(state.photos)
+        ? '' : 'Revise as fotos enviadas.';
     case 10:
       return typeof state.notes === 'string' && state.notes.length <= 500 && uniqueAllowed(state.accessories, accessories)
         ? '' : 'Revise as observações (até 500 caracteres) e acessórios.';

@@ -232,9 +232,8 @@ begin
     end if;
     if new.photos is null or jsonb_typeof(new.photos) <> 'object'
        or octet_length(new.photos::text) > 4096
-       or (select count(*) from jsonb_each(new.photos)) > 5
-       or (tg_op = 'UPDATE' and (not (new.photos ? 'front') or not (new.photos ? 'back'))) then
-      raise exception 'expected front, back and at most five photo references' using errcode = '23514';
+       or (select count(*) from jsonb_each(new.photos)) > 5 then
+      raise exception 'expected at most five photo references' using errcode = '23514';
     end if;
     for item in select key, value from jsonb_each(new.photos) loop
       if item.key not in ('front','back','left','right','detail')
