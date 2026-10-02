@@ -17,7 +17,7 @@ Para desenvolvimento, na raiz do repositório:
 python3 -m http.server 8000 --bind 127.0.0.1
 ```
 
-Abra `http://localhost:8000`. Não abra HTML via `file://`; UUIDs e APIs do navegador exigem localhost ou HTTPS. Esse servidor é apenas de desenvolvimento e expõe arquivos da pasta; em produção publique somente o frontend, use HTTPS e configure headers/CSP adequados ao SDK e ao Supabase.
+Abra `http://localhost:8000`. Não abra HTML via `file://`; UUIDs e APIs do navegador exigem localhost ou HTTPS. Esse servidor é apenas de desenvolvimento e expõe arquivos da pasta; em produção publique somente o frontend e use HTTPS. O `vercel.json` já define CSP e demais headers de segurança; se trocar de projeto Supabase ou de CDN, atualize a CSP. O SDK do Supabase é carregado com versão fixa e SRI: ao atualizá-lo, recalcule o hash `integrity` em `avaliar.html` e `admin.html`.
 
 ## Configuração pública
 
@@ -60,7 +60,7 @@ returning store_id, user_id, role;
 
 - **Sessão de envio:** antes do primeiro envio, o repository reutiliza a sessão existente ou chama `auth.signInAnonymously()`. A identidade do JWT vira `submitted_by`; esse valor não é aceito no payload enviado pelo navegador. O remetente pode ler e editar somente sua própria avaliação enquanto o status for `Nova`. Isso não concede acesso a `store_members` nem ao painel.
 - **Criar avaliação:** primeiro insere a linha com `photos: {}` e código `GT-${crypto.randomUUID()}`; depois envia as fotos e atualiza a mesma linha. O botão **Voltar e editar** preserva código e identidade, portanto não cria um segundo lead. Se a criação ou o upload falhar, o repository remove os arquivos enviados e pode excluir por até 15 minutos a linha ainda vazia. Não enviar `id`, timestamps, `submitted_by` nem `upgrade_*`.
-- **Upload:** path obrigatório: `<storeId>/<GT-uuid>/<slot>-<uuid>.jpg|jpeg|png|webp`, onde o slot é `front`, `back`, `left`, `right` ou `detail`. O banco exige uma avaliação `Nova` pertencente ao JWT. Cada slot aceita no máximo duas versões simultâneas para permitir substituição com cleanup; JPEG/PNG/WebP têm limite de **6 MiB (6.291.456 bytes)**. O remetente pode ler/apagar somente objetos cujo `owner_id` seja o próprio usuário. HEIC/HEIF não é aceito.
+- **Upload:** path obrigatório: `<storeId>/<GT-uuid>/<slot>-<uuid>.jpg|jpeg|png|webp`, onde o slot é `front`, `back`, `left`, `right` ou `detail`. O banco exige uma avaliação `Nova` pertencente ao JWT. Cada slot aceita no máximo duas versões simultâneas para permitir substituição com cleanup; JPEG/PNG/WebP têm limite de **6 MiB (6.291.456 bytes)** no envio; a foto escolhida pode ter até 20 MiB, pois é reduzida no aparelho antes de subir. O remetente pode ler/apagar somente objetos cujo `owner_id` seja o próprio usuário. HEIC/HEIF não é aceito.
 - **Validação:** o banco limita descrições, arrays, metadata, valores e payload a 32 KiB; fotos são paths, nunca base64 ou URLs. Estimativas continuam sendo declarações não confiáveis do navegador, não preço aprovado. A validação roda novamente quando o remetente edita o payload.
 - **Modo local:** avaliações continuam disponíveis no painel local, mas os base64 das fotos nunca são persistidos no `localStorage`. A tela informa essa limitação ao usuário.
 - **Painel:** membros leem somente avaliações/fotos da própria loja; `createSignedUrl` usa a sessão autenticada. Owner/admin/seller atualizam os campos operacionais permitidos; viewer apenas lê. Nenhum membro é provisionado ou promovido pelo frontend.

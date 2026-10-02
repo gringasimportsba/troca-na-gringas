@@ -25,6 +25,12 @@ function dateBR(value) {
     : '—';
 }
 
+function phoneLink(phone) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  if (digits.length < 10 || digits.length > 11) return escapeHtml(phone || '—');
+  return `<a href="https://wa.me/55${digits}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">${escapeHtml(phone)}</a>`;
+}
+
 function setTitles(title, subtitle) {
   $('#pageTitle').textContent = title;
   $('#pageSub').textContent = subtitle;
@@ -101,8 +107,8 @@ function greeting() {
 
 function renderOverview() {
   setTitles(`${greeting()}!`, 'Aqui está o resumo do Gringas Troca.');
-  const today = new Date().toISOString().slice(0, 10);
-  const todayCount = evaluations.filter(record => String(record.createdAt || '').slice(0, 10) === today).length;
+  const today = new Date().toDateString();
+  const todayCount = evaluations.filter(record => new Date(record.createdAt).toDateString() === today).length;
   const pending = evaluations.filter(record => ['Nova', 'Em análise'].includes(record.status)).length;
   const contacted = evaluations.filter(record => ['Cliente contatado', 'Aguardando aparelho', 'Aprovado', 'Troca realizada'].includes(record.status)).length;
   const completed = evaluations.filter(record => record.status === 'Troca realizada').length;
@@ -146,7 +152,7 @@ function renderClients() {
   }
   const list = [...clients.values()];
   $('#content').innerHTML = list.length
-    ? `<div class="client-grid">${list.map(client => `<div class="client-card"><h3>${escapeHtml(client.name)}</h3><p>${escapeHtml(client.phone)}</p><strong>${client.count} avaliação(ões)</strong><p>Última: ${dateBR(client.last)}</p></div>`).join('')}</div>`
+    ? `<div class="client-grid">${list.map(client => `<div class="client-card"><h3>${escapeHtml(client.name)}</h3><p>${phoneLink(client.phone)}</p><strong>${client.count} avaliação(ões)</strong><p>Última: ${dateBR(client.last)}</p></div>`).join('')}</div>`
     : '<div class="panel"><div class="empty"><b>Nenhum cliente ainda.</b>Os leads aparecerão aqui após as avaliações.</div></div>';
 }
 
@@ -266,7 +272,7 @@ async function openDetail(id) {
     : record.warranty?.status || 'Não informado';
   const approvedValue = Number.isFinite(Number(record.approvedValue)) ? String(record.approvedValue) : '';
 
-  $('#drawerContent').innerHTML = `<div class="detail-head"><div class="eyebrow">${escapeHtml(record.id)} • ${dateBR(record.createdAt)}</div><h2>${escapeHtml(record.device?.model || '—')} ${escapeHtml(record.device?.storage || '')}</h2><p>${escapeHtml(record.customer?.name || '—')} • ${escapeHtml(record.customer?.phone || 'Sem WhatsApp')}</p></div>
+  $('#drawerContent').innerHTML = `<div class="detail-head"><div class="eyebrow">${escapeHtml(record.id)} • ${dateBR(record.createdAt)}</div><h2>${escapeHtml(record.device?.model || '—')} ${escapeHtml(record.device?.storage || '')}</h2><p>${escapeHtml(record.customer?.name || '—')} • ${record.customer?.phone ? phoneLink(record.customer.phone) : 'Sem WhatsApp'}</p></div>
     <div class="detail-value">${money(record.calculation?.estimated)}</div>
     ${record.upgrade ? `<div class="upgrade-tag">↗ Interesse: ${escapeHtml(record.upgrade.productName || '—')} ${escapeHtml(record.upgrade.storage || '')} • diferença ${record.upgrade.difference == null ? 'a definir' : money(record.upgrade.difference)}</div>` : ''}
     ${calculationBox(record)}

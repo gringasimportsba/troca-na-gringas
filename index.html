@@ -219,25 +219,6 @@
     </symbol>
   </svg>
 
-  <script>
-    // Menu do header (hambúrguer)
-    (function(){
-      var btn=document.getElementById('menuBtn'),menu=document.getElementById('siteMenu');
-      function set(open){menu.hidden=!open;btn.setAttribute('aria-expanded',open);btn.classList.toggle('open',open)}
-      btn.addEventListener('click',function(){set(menu.hidden)});
-      menu.addEventListener('click',function(e){if(e.target.tagName==='A')set(false)});
-      document.addEventListener('keydown',function(e){if(e.key==='Escape')set(false)});
-    })();
-  </script>
-  <script type="module">
-    import { generalWhatsappUrl } from './js/shared/whatsapp.js';
-
-    const whatsappLink = document.querySelector('[data-whatsapp-link]');
-    try {
-      whatsappLink.href = generalWhatsappUrl();
-    } catch {
-      whatsappLink.hidden = true;
-    }
-  </script>
+  <script type="module" src="js/landing.js"></script>
 </body>
 </html>

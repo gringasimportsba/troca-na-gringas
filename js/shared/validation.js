@@ -3,7 +3,8 @@ import { catalog, rules } from '../evaluation/calculator.js';
 const answers = ['Sim', 'Não', 'Não sei'];
 const accessories = ['Caixa', 'Cabo', 'Nota fiscal'];
 const photoTypes = ['image/jpeg', 'image/png', 'image/webp'];
-const maxPhotoBytes = 6 * 1024 * 1024;
+// Limite do arquivo escolhido; a foto é reduzida no aparelho antes do envio (limite de 6 MiB no repository).
+const maxPhotoBytes = 20 * 1024 * 1024;
 
 export const initialState = () => ({
   step: 1,
@@ -42,7 +43,7 @@ export function validatePhotoFile(file) {
     return 'Use uma foto JPEG, PNG ou WebP.';
   }
   if (!Number.isFinite(file.size) || file.size <= 0 || file.size > maxPhotoBytes) {
-    return 'Cada foto deve ter conteúdo e no máximo 6 MiB.';
+    return 'Cada foto deve ter conteúdo e no máximo 20 MiB.';
   }
   return '';
 }

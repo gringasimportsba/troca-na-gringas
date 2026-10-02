@@ -35,7 +35,7 @@ function shell(step, title, subtitle, body, footer, animate = true) {
 }
 
 function button(label = 'CONTINUAR →', className = 'primary', disabled = false) {
-  return `<button type="button" class="btn ${className}${disabled ? ' disabled' : ''}" data-next${disabled ? ' disabled' : ''}>${label}</button>`;
+  return `<button type="button" class="btn ${className}${disabled ? ' disabled' : ''}" data-next aria-disabled="${disabled}">${label}</button>`;
 }
 
 function showError(root, message = '') {
@@ -135,8 +135,9 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
     const nextButton = root.querySelector('[data-next]');
     if (!nextButton) return;
     const error = validateStep(state);
-    nextButton.disabled = Boolean(error) || saving || photoLoading;
-    nextButton.classList.toggle('disabled', nextButton.disabled);
+    nextButton.disabled = saving || photoLoading;
+    nextButton.classList.toggle('disabled', Boolean(error) || nextButton.disabled);
+    nextButton.setAttribute('aria-disabled', String(Boolean(error) || nextButton.disabled));
   }
 
   function refreshSelections() {
@@ -378,7 +379,7 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
             : `<span class="photo-plus" aria-hidden="true">＋</span><b>${escapeHtml(label)}</b><small>${required ? 'obrigatória' : 'opcional'}</small>`}
             <input aria-label="Foto: ${escapeHtml(label)}" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" data-photo="${key}"${photoLoading ? ' disabled' : ''}></label>
             ${source ? `<button type="button" class="photo-remove" data-remove-photo="${key}">Remover</button>` : ''}</div>`;
-        }).join('')}</div><p class="note">Tire a foto na hora ou escolha da galeria. Prefira um lugar bem iluminado. Envie JPEG, PNG ou WebP de até 6 MB.</p>`;
+        }).join('')}</div><p class="note">Tire a foto na hora ou escolha da galeria. Prefira um lugar bem iluminado. Envie JPEG, PNG ou WebP de até 20 MB.</p>`;
         break;
       case 10:
         title = 'Algo mais que devemos saber?';
@@ -410,6 +411,7 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
     renderedStep = state.step;
     root.innerHTML = shell(state.step, title, subtitle, body, `${button(label, className, disabled)}${extra}`, animate);
     bindStepEvents();
+    syncNextButton();
   }
 
   function renderResult() {
