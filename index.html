@@ -1,96 +1,164 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Gringas Troca — Passo 5.6 FINAL</title>
-<link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Gringas Troca — Troque seu iPhone por um novo</title>
+  <link rel="stylesheet" href="landing.css">
 </head>
 <body>
-<div class="app">
-  <header class="topbar">
-    <button class="icon-btn hidden" id="backBtn" aria-label="Voltar">←</button>
-    <div class="brand"><span class="crown">♛</span><b>GRINGAS</b><small>TROCA</small></div>
-    <button class="text-btn" id="restartBtn">Reiniciar</button>
+
+  <!-- ===== HEADER ===== -->
+  <header class="lp-header">
+    <div class="lp-header-inner">
+      <div class="lp-brand">
+        <span class="lp-crown">&#9819;</span>
+        <div>
+          <b>GRINGAS</b>
+          <small>TROCA</small>
+        </div>
+      </div>
+      <a class="lp-wa-btn" href="https://wa.me/5571999498939" target="_blank" rel="noopener" aria-label="Contato via WhatsApp">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+        </svg>
+        <span>WhatsApp</span>
+      </a>
+    </div>
   </header>
 
-  <main id="screen"></main>
-</div>
+  <!-- ===== HERO ===== -->
+  <section class="lp-hero">
+    <div class="lp-hero-inner">
+      <div class="lp-hero-copy">
+        <span class="lp-pill">TROCA NA GRINGAS</span>
+        <h1>Troque seu iPhone<br>por um novo.</h1>
+        <p>Descubra agora quanto ele pode valer na troca pelo seu pr&oacute;ximo iPhone.</p>
+        <a class="lp-cta" href="avaliar.html">AVALIAR MEU IPHONE <span>&#8594;</span></a>
+      </div>
 
-<template id="welcome">
-<section class="screen welcome">
-
-  <div class="hero-copy">
-    <span class="pill">TROCA NA GRINGAS</span>
-
-    <h1>Troque seu iPhone<br>por um novo.</h1>
-
-    <p>
-      Avalie seu aparelho em poucos minutos e descubra
-      quanto ele pode valer na troca.
-    </p>
-  </div>
-
-  <div class="phone-stage premium-phones">
-    <div class="real-phone phone-duo">
-      <div class="real-phone-camera duo-camera"></div>
-      <span>iPhone 18<br><b>DUO</b></span>
+      <!-- 3 iPhones decorativos -->
+      <div class="lp-phones">
+        <div class="lp-phone lp-phone-duo">
+          <div class="lp-camera lp-cam-duo"></div>
+          <span>iPhone 18<br><b>DUO</b></span>
+        </div>
+        <div class="lp-phone lp-phone-pro">
+          <div class="lp-camera lp-cam-pro"></div>
+          <span>iPhone 18<br><b>PRO</b></span>
+        </div>
+        <div class="lp-phone lp-phone-promax">
+          <div class="lp-camera lp-cam-promax"></div>
+          <span>iPhone 18<br><b>PRO MAX</b></span>
+        </div>
+        <div class="lp-glow"></div>
+      </div>
     </div>
+  </section>
 
-    <div class="real-phone phone-pro">
-      <div class="real-phone-camera pro-camera"></div>
-      <span>iPhone 18<br><b>PRO</b></span>
+  <!-- ===== BENEFÍCIOS ===== -->
+  <section class="lp-benefits">
+    <div class="lp-section-inner">
+      <div class="lp-benefit-card">
+        <div class="lp-benefit-icon">&#9878;</div>
+        <strong>Avalia&ccedil;&atilde;o Justa</strong>
+        <p>Pre&ccedil;os baseados no mercado real, sem surpresas na hora da troca.</p>
+      </div>
+      <div class="lp-benefit-card">
+        <div class="lp-benefit-icon">&#128274;</div>
+        <strong>Processo Seguro</strong>
+        <p>Seus dados e aparelho protegidos em todas as etapas.</p>
+      </div>
+      <div class="lp-benefit-card">
+        <div class="lp-benefit-icon">&#129309;</div>
+        <strong>Atendimento Especializado</strong>
+        <p>Equipe dedicada pronta para ajudar voc&ecirc; a fazer o melhor neg&oacute;cio.</p>
+      </div>
     </div>
+  </section>
 
-    <div class="real-phone phone-pro-max">
-      <div class="real-phone-camera pro-max-camera"></div>
-      <span>iPhone 18<br><b>PRO MAX</b></span>
+  <!-- ===== MODELOS ACEITOS ===== -->
+  <section class="lp-models">
+    <div class="lp-section-inner">
+      <div class="lp-models-text">
+        <span class="lp-section-label">MODELOS ACEITOS NA TROCA</span>
+        <h2>Do iPhone 11 ao mais novo.</h2>
+        <p>Seu iPhone ainda vale. Fa&ccedil;a uma avalia&ccedil;&atilde;o e descubra.</p>
+      </div>
+      <div class="lp-model-grid">
+        <span>iPhone 11</span>
+        <span>iPhone 12</span>
+        <span>iPhone 13</span>
+        <span>iPhone 14</span>
+        <span>iPhone 15</span>
+        <span>iPhone 16</span>
+        <span>iPhone 17</span>
+        <span>iPhone 18</span>
+      </div>
     </div>
+  </section>
 
-    <div class="phone-glow premium-glow"></div>
-  </div>
-
-  <button class="primary" data-next="AVALIAR MEU IPHONE">
-    AVALIAR MEU IPHONE <span>→</span>
-  </button>
-
-  <div class="trust">
-    <span>◷ Avaliação em poucos minutos</span>
-    <span>✓ Sem compromisso</span>
-    <span>↻ Use como entrada na Gringas</span>
-  </div>
-
-  <div class="home-models">
-    <div class="home-models-label">MODELOS ACEITOS NA TROCA</div>
-    <h2>Do iPhone 11 ao mais novo.</h2>
-    <p>Seu iPhone ainda vale. Faça uma avaliação e descubra.</p>
-
-    <div class="home-model-list">
-      <span>iPhone 11</span>
-      <span>iPhone 12</span>
-      <span>iPhone 13</span>
-      <span>iPhone 14</span>
-      <span>iPhone 15</span>
-      <span>iPhone 16</span>
-      <span>iPhone 17</span>
-      <span>iPhone 18</span>
+  <!-- ===== COMO FUNCIONA ===== -->
+  <section class="lp-how">
+    <div class="lp-section-inner">
+      <span class="lp-section-label">COMO FUNCIONA</span>
+      <h2>Simples, r&aacute;pido e sem complica&ccedil;&atilde;o.</h2>
+      <div class="lp-steps">
+        <div class="lp-step">
+          <div class="lp-step-num">1</div>
+          <div>
+            <strong>Informe os dados</strong>
+            <p>Preencha o modelo, capacidade e estado do seu aparelho.</p>
+          </div>
+        </div>
+        <div class="lp-step-divider"></div>
+        <div class="lp-step">
+          <div class="lp-step-num">2</div>
+          <div>
+            <strong>Envie as fotos</strong>
+            <p>Tire fotos da frente e traseira diretamente pelo celular.</p>
+          </div>
+        </div>
+        <div class="lp-step-divider"></div>
+        <div class="lp-step">
+          <div class="lp-step-num">3</div>
+          <div>
+            <strong>Receba sua avalia&ccedil;&atilde;o</strong>
+            <p>A Gringas entra em contato com a proposta de troca.</p>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <div class="home-steps">
-    <div><strong>1</strong><span>Informe os dados<br>do seu aparelho</span></div>
-    <div><strong>2</strong><span>Envie fotos<br>do seu iPhone</span></div>
-    <div><strong>3</strong><span>Receba sua<br>avaliação</span></div>
-  </div>
+  <!-- ===== CTA FINAL ===== -->
+  <section class="lp-final-cta">
+    <div class="lp-section-inner lp-final-cta-inner">
+      <span class="lp-pill">SEU PR&Oacute;XIMO IPHONE EST&Aacute; MAIS PERTO</span>
+      <h2>Pronto para fazer seu upgrade?</h2>
+      <p>Avalie agora e descubra quanto o seu iPhone pode valer na troca.</p>
+      <a class="lp-cta" href="avaliar.html">AVALIAR MEU IPHONE <span>&#8594;</span></a>
+      <p class="lp-legal">Avalia&ccedil;&atilde;o inicial sem compromisso. O valor final ser&aacute; confirmado ap&oacute;s an&aacute;lise f&iacute;sica do aparelho pela Gringas.</p>
+    </div>
+  </section>
 
-  <p class="legal">
-    Avaliação inicial. O valor final será confirmado após análise física do aparelho.
-  </p>
+  <!-- ===== FOOTER ===== -->
+  <footer class="lp-footer">
+    <div class="lp-footer-inner">
+      <div class="lp-brand lp-brand-sm">
+        <span class="lp-crown">&#9819;</span>
+        <div><b>GRINGAS</b><small>TROCA</small></div>
+      </div>
+      <p>&copy; 2026 Gringas Troca. Todos os direitos reservados.</p>
+    </div>
+  </footer>
 
-</section>
-</template>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=56.2"></script>
-<script src="cloud.js?v=56.2"></script>
-<script src="app.js?v=56.2"></script>
+  <!-- ===== FAB WHATSAPP (sempre visível) ===== -->
+  <a class="lp-wa-fab" href="https://wa.me/5571999498939" target="_blank" rel="noopener" aria-label="Falar no WhatsApp">
+    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+    </svg>
+  </a>
+
 </body>
 </html>
