@@ -177,7 +177,6 @@ def phone_svg(uid, body, frame, kind):
 
 PHONES = {
     # hero — cores da referência do cliente
-    "iphone-18":         ("#e4e1dc", "#d2cec7", "capsule"),   # prata/branco
     "iphone-18-pro":     ("#c27a4a", "#d9996b", "plateau"),   # cobre
     "iphone-18-pro-max": ("#36322f", "#57524d", "plateau"),   # grafite escuro
     # modelos aceitos

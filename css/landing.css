@@ -165,7 +165,7 @@ h1, h2, h3 { color: #fff; }
   text-align: center; font-size: var(--fs-2xs); line-height: 1.35; color: #b9b9b5;
 }
 
-/* ---- Palco dos iPhones (decorativo, desenhado em CSS) ---- */
+/* ---- Palco dos iPhones (decorativo, imagens reais WebP) ---- */
 .lp-stage {
   --pw: clamp(74px, 24vw, 104px); /* acompanha a largura do celular */
   position: relative;
@@ -174,7 +174,7 @@ h1, h2, h3 { color: #fff; }
   display: flex; align-items: flex-end; justify-content: center; gap: 0;
   padding-bottom: calc(var(--pw) * .28);
 }
-.lp-device { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 1; }
+.lp-device { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; z-index: 1; flex: 0 0 auto; }
 .lp-device figcaption {
   text-align: center; line-height: 1.15; white-space: nowrap;
   font-size: clamp(9px, 2.6vw, 11px); font-weight: var(--fw-medium); color: #e6e2da;
@@ -182,10 +182,10 @@ h1, h2, h3 { color: #fff; }
 .lp-device figcaption b { display: block; font-size: 1.1em; font-weight: var(--fw-heavy); letter-spacing: .02em; }
 
 .lp-device img {
-  width: auto; height: calc(var(--pw) * 2.07);
+  width: auto; max-width: none; height: calc(var(--pw) * 2.07);
   filter: drop-shadow(0 28px 34px rgba(0, 0, 0, .75)) drop-shadow(0 0 22px rgba(230, 160, 80, .16));
 }
-.lp-device-3 img { height: calc(var(--pw) * 2.2); }  /* Pro Max é maior que o Pro */
+.lp-device-1 img, .lp-device-3 img { height: calc(var(--pw) * 2.2); }  /* Pro Max é maior que o Pro */
 .lp-device-1 { transform: translateY(-4%) rotate(-4deg); }
 .lp-device-2 { transform: translateY(-9%); z-index: 2; margin: 0 calc(var(--pw) * -.08); }
 .lp-device-3 { transform: translateY(-5%) rotate(4deg); }
@@ -344,7 +344,7 @@ h1, h2, h3 { color: #fff; }
   .lp-hero-inner { flex-direction: row; align-items: center; gap: var(--sp-6); }
   .lp-hero-copy { flex: 0 0 50%; }
   .lp-hero-copy h1 { font-size: clamp(2.5rem, .6rem + 3.9vw, 4.25rem); }
-  .lp-stage { --pw: clamp(104px, 11.5vw, 170px); flex: 1; height: calc(var(--pw) * 3); margin: 0; }
+  .lp-stage { --pw: clamp(96px, 10.5vw, 150px); flex: 1; height: calc(var(--pw) * 3); margin: 0; }
 }
 
 /* Celular deitado: pouca altura, compacta o hero */
@@ -366,12 +366,12 @@ h1, h2, h3 { color: #fff; }
 }
 
 @media (min-width: 1280px) {
-  .lp-stage { --pw: 190px; }
+  .lp-stage { --pw: 160px; }
 }
 
 /* Telas grandes: conteúdo mais largo */
 @media (min-width: 1440px) {
   :root { --w-content: 1240px; }
-  .lp-stage { --pw: 210px; }
+  .lp-stage { --pw: 175px; }
   .lp-hero-copy h1 { font-size: 4.75rem; }
 }
