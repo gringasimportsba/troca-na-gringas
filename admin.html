@@ -2,44 +2,64 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Gringas Troca — Painel Administrativo 5.6</title>
-<link rel="stylesheet" href="admin.css">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Painel | Gringas Troca</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0f1111">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css">
+<link rel="stylesheet" href="admin.css?v=59">
 </head>
 <body>
 <div class="app">
-  <aside class="sidebar">
-    <div class="brand"><div class="crown">♛</div><strong>GRINGAS</strong><span>TROCA</span></div>
+  <aside class="sidebar" id="sidebar" aria-label="Menu do painel">
+    <div class="brand"><img class="brand-logo" src="assets/logo-gringas-white.png" alt="Gringas Imports" width="340" height="160"><span class="brand-sub">TROCA • PAINEL</span></div>
     <nav>
-      <button class="nav active" data-view="overview">⌂ <span>Visão geral</span></button>
-      <button class="nav" data-view="evaluations">▤ <span>Avaliações</span></button>
-      <button class="nav" data-view="clients">◉ <span>Clientes</span></button>
-      <button class="nav" data-view="prices">R$ <span>Aparelhos e preços</span></button>
-      <button class="nav" data-view="rules">⚙ <span>Regras de avaliação</span></button>
-      <button class="nav" data-view="upgrade">↗ <span>Produtos para upgrade</span></button>
+      <button class="nav active" data-view="overview"><span class="nav-ico" aria-hidden="true">⌂</span><span class="nav-label">Visão geral</span></button>
+      <button class="nav" data-view="evaluations"><span class="nav-ico" aria-hidden="true">▤</span><span class="nav-label">Avaliações</span></button>
+      <button class="nav" data-view="clients"><span class="nav-ico" aria-hidden="true">◉</span><span class="nav-label">Clientes</span></button>
+      <button class="nav" data-view="prices"><span class="nav-ico" aria-hidden="true">R$</span><span class="nav-label">Aparelhos e preços</span></button>
+      <button class="nav" data-view="rules"><span class="nav-ico" aria-hidden="true">⚙</span><span class="nav-label">Regras de avaliação</span></button>
+      <button class="nav" data-view="upgrade"><span class="nav-ico" aria-hidden="true">↗</span><span class="nav-label">Produtos para upgrade</span></button>
     </nav>
-    <div class="side-foot"><a href="index.html">← Abrir avaliação</a><small>Passo 5.6 • dados locais</small></div>
+    <div class="side-foot">
+      <a href="avaliar.html" target="_blank" rel="noopener"><span class="nav-ico" aria-hidden="true">↗</span><span class="nav-label">Abrir avaliação</span></a>
+      <button type="button" class="side-logout" data-logout hidden><span class="nav-ico" aria-hidden="true">⎋</span><span class="nav-label">Sair</span></button>
+    </div>
   </aside>
+  <div class="backdrop" id="backdrop" hidden></div>
 
   <main>
-    <header>
-      <button id="menuBtn" class="menu">☰</button>
-      <div><h1 id="pageTitle">Boa noite, Railander. 👋</h1><p id="pageSub">Aqui está o resumo do Gringas Troca.</p></div>
-      <div class="admin-pill">GRINGAS IMPORTS <span>●</span></div>
+    <header class="page-head">
+      <button id="menuBtn" class="menu" type="button" aria-label="Abrir menu" aria-controls="sidebar" aria-expanded="false">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div class="titles"><h1 id="pageTitle">Visão geral</h1><p id="pageSub"></p></div>
+      <div class="head-actions" id="headActions">
+        <button type="button" class="logout-btn" data-logout hidden>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          <span>Sair</span>
+        </button>
+      </div>
     </header>
     <section id="content"></section>
   </main>
 </div>
 
 <div class="drawer" id="drawer" aria-hidden="true">
-  <div class="drawer-card">
-    <button class="drawer-close" id="drawerClose">×</button>
+  <div class="drawer-card" role="dialog" aria-modal="true" aria-label="Detalhes da avaliação">
+    <button class="drawer-close" id="drawerClose" type="button" aria-label="Fechar">×</button>
     <div id="drawerContent"></div>
   </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js"></script>
-<script src="cloud.js"></script>
-<script src="admin.js?v=57.0"></script>
+<script src="config.js?v=57"></script>
+<script src="cloud.js?v=57"></script>
+<script src="admin.js?v=58"></script>
 </body>
 </html>
