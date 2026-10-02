@@ -1,5 +1,6 @@
 import { catalog, rules, calculate, calculateUpgrade } from './calculator.js';
-import { saveEvaluation, saveUpgrade, whatsappNumber } from './repository.js';
+import { saveEvaluation, saveUpgrade } from './repository.js';
+import { evaluationWhatsappUrl, upgradeWhatsappUrl } from '../shared/whatsapp.js';
 import * as validation from '../shared/validation.js';
 import * as sanitization from '../shared/sanitization.js';
 
@@ -93,9 +94,6 @@ function maskPhone(value) {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
-function whatsappUrl(message) {
-  return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
-}
 
 export function mountEvaluationApp({ document = globalThis.document } = {}) {
   const root = document?.getElementById('screen');
@@ -165,7 +163,8 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
     if (submit) submit.textContent = 'SALVANDO...';
     try {
       const calculation = calculate(state);
-      record = await saveEvaluation(state, calculation);
+      record = await saveEvaluation(state, calculation, record);
+      saving = false;
       state.evaluationId = record.id;
       state.step = 12;
       pushNavigation('result', state.step);
@@ -384,7 +383,12 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
     const warrantyLabel = warranty.status === 'Sim'
       ? `Sim${warranty.date ? ` • até ${warranty.date.split('-').reverse().join('/')}` : ''}`
       : warranty.status || 'Não informado';
-    const message = `Olá, Gringas! Fiz uma avaliação no Gringas Troca. Código: ${record.id}. Aparelho: ${record.device.model} ${record.device.storage}. Valor estimado: ${money(calculation.estimated)}. Quero continuar o atendimento.`;
+    const whatsappHref = evaluationWhatsappUrl(record, money(calculation.estimated));
+    const persistenceWarning = record.photoStorageWarning
+      ? '<div class="note">As fotos ficam disponíveis somente nesta tela e não foram gravadas no armazenamento local do navegador.</div>'
+      : record.photoCleanupWarning
+        ? '<div class="note">A avaliação foi atualizada, mas uma foto substituída não pôde ser removida. Avise a equipe se o problema persistir.</div>'
+        : '';
 
     root.innerHTML = `<section class="screen result-screen"><div class="result-kicker">SUA AVALIAÇÃO FICOU PRONTA</div>
       <div class="result-device"><span class="result-phone-art"></span><div><b>${escapeHtml(record.device.model)}</b><small>${escapeHtml(record.device.storage)}</small></div></div>
@@ -392,6 +396,7 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
         ? `<div class="manual-card"><span>ANÁLISE ESPECIAL</span><h1>Precisamos confirmar alguns detalhes do seu iPhone.</h1><p>A Gringas fará uma análise antes de confirmar o valor. Sua referência inicial é de <b>${money(calculation.estimated)}</b>.</p></div>`
         : `<div class="value-label">SEU IPHONE PODE VALER ATÉ</div><div class="result-value">${money(calculation.estimated)}</div><div class="value-sub">como entrada na Gringas.</div><div class="result-callout">🔥 Seu próximo iPhone está mais perto.</div>`}
       <div class="evaluation-code">Avaliação <b>${escapeHtml(record.id)}</b></div>
+      ${persistenceWarning}
       <div class="demo-warning">⚠️ Valores demonstrativos para validar o motor. A condição final será confirmada pela Gringas.</div>
       <div class="summary-card"><h3>Dados complementares</h3>
         <div class="summary-row"><span>📸 Fotos</span><b>${Object.keys(record.photos || {}).length}</b></div>
@@ -403,13 +408,11 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
       <div class="footer-actions result-actions"><button type="button" class="btn primary gold" id="upgrade">QUERO FAZER MEU UPGRADE →</button>
         <button type="button" class="btn ghost" id="diagnostic">VER DIAGNÓSTICO DO CÁLCULO</button>
         <button type="button" class="btn ghost" id="edit">VOLTAR E EDITAR</button>
-        <a class="btn whatsapp" href="${escapeHtml(whatsappUrl(message))}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">FALAR COM A GRINGAS →</a></div>
+        <a class="btn whatsapp" href="${escapeHtml(whatsappHref)}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">FALAR COM A GRINGAS →</a></div>
       <p class="legal">Valor estimado com base nas informações fornecidas. O WhatsApp abre somente ao clicar e a mensagem não inclui links das fotos.</p></section>`;
 
     root.querySelector('#edit').addEventListener('click', () => {
-      state.evaluationId = '';
       state.step = 11;
-      record = null;
       pushNavigation('wizard', 11);
       render();
     });
@@ -463,8 +466,12 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
       try {
         record = await saveUpgrade(record, selected);
         const value = record.upgrade;
-        const message = `Olá, Gringas! Quero continuar meu upgrade. Avaliação: ${record.id}. Crédito estimado: ${money(value.tradeValue)}. Interesse: ${value.productName} ${value.storage}.${value.difference === null ? '' : ` Diferença estimada: ${money(value.difference)}.`}`;
-        root.innerHTML = `<section class="screen upgrade-screen"><div class="screen-body"><div class="success-note">✓ UPGRADE SELECIONADO</div><h1 class="question">${value.productId === 'undecided' ? 'Vamos ajudar você a escolher.' : 'Seu próximo iPhone está ainda mais perto.'}</h1><div class="deal-card"><div class="deal-row"><span>Crédito estimado</span><b>${money(value.tradeValue)}</b></div><div class="deal-row"><span>Interesse</span><b>${escapeHtml(value.productName)} ${escapeHtml(value.storage)}</b></div>${value.difference === null ? '' : `<div class="deal-total"><span>Diferença estimada</span><div class="deal-amount">${money(value.difference)}</div></div>`}</div></div><div class="footer-actions"><a class="btn whatsapp" href="${escapeHtml(whatsappUrl(message))}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">CONTINUAR NO WHATSAPP →</a><button type="button" class="btn ghost" id="backResult">VOLTAR AO RESULTADO</button></div><p class="legal">O WhatsApp abre somente ao clicar e a mensagem não inclui links das fotos.</p></section>`;
+        const whatsappHref = upgradeWhatsappUrl(
+          record,
+          money(value.tradeValue),
+          value.difference === null ? '' : money(value.difference)
+        );
+        root.innerHTML = `<section class="screen upgrade-screen"><div class="screen-body"><div class="success-note">✓ UPGRADE SELECIONADO</div><h1 class="question">${value.productId === 'undecided' ? 'Vamos ajudar você a escolher.' : 'Seu próximo iPhone está ainda mais perto.'}</h1><div class="deal-card"><div class="deal-row"><span>Crédito estimado</span><b>${money(value.tradeValue)}</b></div><div class="deal-row"><span>Interesse</span><b>${escapeHtml(value.productName)} ${escapeHtml(value.storage)}</b></div>${value.difference === null ? '' : `<div class="deal-total"><span>Diferença estimada</span><div class="deal-amount">${money(value.difference)}</div></div>`}</div></div><div class="footer-actions"><a class="btn whatsapp" href="${escapeHtml(whatsappHref)}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">CONTINUAR NO WHATSAPP →</a><button type="button" class="btn ghost" id="backResult">VOLTAR AO RESULTADO</button></div><p class="legal">O WhatsApp abre somente ao clicar e a mensagem não inclui links das fotos.</p></section>`;
         root.querySelector('#backResult').addEventListener('click', () => globalThis.history.back());
       } catch (error) {
         showError(root, error.message || 'Não foi possível salvar o upgrade.');
@@ -496,10 +503,6 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
     }
     currentView = navigation.view;
     state.step = navigation.step;
-    if (currentView === 'wizard' && state.step === TOTAL_STEPS && record) {
-      state.evaluationId = '';
-      record = null;
-    }
     render();
     globalThis.scrollTo?.(0, 0);
   });

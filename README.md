@@ -1,6 +1,6 @@
 # Gringas Troca
 
-Frontend estático com Supabase como backend (Auth, PostgreSQL/RLS e Storage), usando o SDK no navegador. Nesta etapa não há Edge Function.
+Frontend estático com Supabase como backend (Auth, PostgreSQL/RLS e Storage), usando o SDK no navegador. O envio público usa uma sessão anônima do Supabase Auth para identificar o remetente sem exigir formulário de cadastro.
 
 ## Estrutura e execução
 
@@ -27,9 +27,10 @@ Edite `js/config.js`: `mode: 'cloud'`, `supabaseUrl`, `supabaseAnonKey` (chave *
 
 ## Instalar o banco
 
-1. Crie um projeto Supabase. No **SQL Editor**, execute inteiro `supabase/setup.sql` como operador privilegiado.
-2. O script cria/reutiliza `stores`, `store_members`, `evaluations` e o bucket privado, remove `claim_initial_gringas_admin` e substitui as permissões/policies dessas tabelas. É transacional e reaplicável sobre o schema original; não apaga registros ou membros. Em instalações existentes, faça backup, revise membros e objetos customizados antes: um owner criado pelo bootstrap antigo pode não ser legítimo. `CREATE TABLE IF NOT EXISTS` não reconcilia schemas customizados.
-3. Crie/convide o primeiro administrador em **Authentication → Users**, confirme email e identidade por um canal confiável. No SQL Editor, encontre o UUID:
+1. Crie um projeto Supabase. Em **Authentication → Providers → Anonymous Sign-Ins**, habilite logins anônimos. Revise também os limites de requisição do Auth; eles são parte da proteção básica do envio público.
+2. No **SQL Editor**, execute inteiro `supabase/setup.sql` como operador privilegiado.
+3. O script cria/reutiliza `stores`, `store_members`, `evaluations` e o bucket privado, adiciona `submitted_by`, remove `claim_initial_gringas_admin` e substitui as permissões/policies dessas tabelas. É transacional e reaplicável sobre o schema original; não apaga avaliações ou membros. Em instalações existentes, faça backup, revise membros e objetos customizados antes: um owner criado pelo bootstrap antigo pode não ser legítimo. `CREATE TABLE IF NOT EXISTS` não reconcilia schemas customizados.
+4. Crie/convide o primeiro administrador em **Authentication → Users**, confirme email e identidade por um canal confiável. No SQL Editor, encontre o UUID:
 
 ```sql
 select id, email, email_confirmed_at
@@ -37,7 +38,7 @@ from auth.users
 where lower(email) = lower('admin@sua-empresa.com');
 ```
 
-4. Substitua o UUID abaixo pelo usuário verificado e execute **somente no SQL Editor**:
+5. Substitua o UUID abaixo pelo usuário verificado e execute **somente no SQL Editor**:
 
 ```sql
 insert into public.store_members (store_id, user_id, role)
@@ -57,20 +58,23 @@ returning store_id, user_id, role;
 
 ## Contrato do navegador
 
-- **Criar avaliação:** `client.from('evaluations').insert(row)`, sem `.select()` e sem upsert. Anon e usuários autenticados podem criar apenas na loja fixa, com código `GT-${crypto.randomUUID()}`, `status: 'Nova'`, `approved_value: null` e `adjustment_reason` vazio/null. Não enviar `id`, timestamps nem `upgrade_*` no INSERT. O banco limita descrições, arrays, metadata, valores e payload a 32 KiB; fotos são paths, nunca base64/URLs. Nome até 160 caracteres, telefone até 40, observações até 4000, bateria 0–100/null. Estimativas entre 0 e 1.000.000 continuam sendo declarações não confiáveis do cliente, não preço aprovado.
-- **Upload:** `client.storage.from('evaluation-photos').upload(path, blob, { upsert: false, contentType: blob.type })`. Path obrigatório: `<storeId>/<GT-uuid>/<nome-seguro>.jpg|jpeg|png|webp`. Nome com 1–100 letras ASCII, números, `_` ou `-` antes da extensão; UUID hexadecimal minúsculo. JPEG/PNG/WebP, até **6 MiB (6.291.456 bytes) por arquivo**. Em `photos`, usar objeto slot → path da própria loja/código, até seis referências. HEIC/HEIF não são aceitos.
-- **Visitante:** não lê, altera ou apaga avaliações/fotos. Não recebe URL assinada. `updateUpgrade` público continua proibido: código não é autorização; guardar interesse só localmente ou informar claramente a falha. Nunca mostrar sucesso na nuvem após erro.
-- **Painel:** membros leem somente avaliações/fotos da própria loja; `createSignedUrl` usa a sessão autenticada. Owner/admin/seller atualizam apenas `status`, `approved_value`, `adjustment_reason`, `upgrade_*` e `updated_at`; o banco controla timestamps. Viewer apenas lê dados administrativos (mantém a mesma possibilidade de envio público que qualquer visitante). Nenhum membro promove usuários, altera cliente/cálculo/fotos ou apaga registros via API.
-- UPDATE com RLS pode afetar zero linhas sem erro: confirmar retorno/registro antes de anunciar sucesso. Status aceitos são os oito estados do painel, de `Nova` a `Cliente desistiu`. Valores operacionais até 1.000.000; diferença de upgrade pode ser negativa.
+- **Sessão de envio:** antes do primeiro envio, o repository reutiliza a sessão existente ou chama `auth.signInAnonymously()`. A identidade do JWT vira `submitted_by`; esse valor não é aceito no payload enviado pelo navegador. O remetente pode ler e editar somente sua própria avaliação enquanto o status for `Nova`. Isso não concede acesso a `store_members` nem ao painel.
+- **Criar avaliação:** primeiro insere a linha com `photos: {}` e código `GT-${crypto.randomUUID()}`; depois envia as fotos e atualiza a mesma linha. O botão **Voltar e editar** preserva código e identidade, portanto não cria um segundo lead. Se a criação ou o upload falhar, o repository remove os arquivos enviados e pode excluir por até 15 minutos a linha ainda vazia. Não enviar `id`, timestamps, `submitted_by` nem `upgrade_*`.
+- **Upload:** path obrigatório: `<storeId>/<GT-uuid>/<slot>-<uuid>.jpg|jpeg|png|webp`, onde o slot é `front`, `back`, `left`, `right` ou `detail`. O banco exige uma avaliação `Nova` pertencente ao JWT. Cada slot aceita no máximo duas versões simultâneas para permitir substituição com cleanup; JPEG/PNG/WebP têm limite de **6 MiB (6.291.456 bytes)**. O remetente pode ler/apagar somente objetos cujo `owner_id` seja o próprio usuário. HEIC/HEIF não é aceito.
+- **Validação:** o banco limita descrições, arrays, metadata, valores e payload a 32 KiB; fotos são paths, nunca base64 ou URLs. Estimativas continuam sendo declarações não confiáveis do navegador, não preço aprovado. A validação roda novamente quando o remetente edita o payload.
+- **Modo local:** avaliações continuam disponíveis no painel local, mas os base64 das fotos nunca são persistidos no `localStorage`. A tela informa essa limitação ao usuário.
+- **Painel:** membros leem somente avaliações/fotos da própria loja; `createSignedUrl` usa a sessão autenticada. Owner/admin/seller atualizam os campos operacionais permitidos; viewer apenas lê. Nenhum membro é provisionado ou promovido pelo frontend.
 
 ## Limitações e operação
 
-**Não há proteção total contra spam.** O ingresso anônimo permite criar muitas avaliações e arquivos: UUID, RLS, limites por registro/arquivo, CORS e validação no browser não são rate limiting. Não há quota por pessoa/IP/dia nem limite real de seis uploads — apenas seis referências por avaliação. Monitore volume/custos, defina retenção e limpe órfãos por operação privilegiada via Storage API. Falhas entre upload e INSERT podem deixar arquivos; tentativa de limpeza pelo visitante será negada.
+Existe uma proteção básica contra abuso: envio exige Supabase Auth, cada identidade pode criar até cinco avaliações em 15 minutos, o Auth acrescenta seus limites de criação de sessão e cada avaliação possui no máximo cinco slots de foto, com até duas versões temporárias por slot. Isso reduz spam acidental e abuso simples, mas **não substitui CAPTCHA, WAF ou rate limit por IP compartilhado**; um atacante distribuído ainda pode criar sessões diferentes. Monitore volume, usuários anônimos e custos, e defina uma política de retenção.
 
-MIME/extensão não comprovam conteúdo real da imagem; não há inspeção, remoção de EXIF nem prova de propriedade/existência da foto referenciada. Pastas UUID não são credenciais: quem conhecer um código pode tentar inserir novos arquivos nessa pasta, mas não ler/substituir os existentes. Membros podem ler também uploads órfãos da sua loja. Trate todo conteúdo recebido como não confiável e renderize-o sem interpolação HTML insegura.
+O fluxo remove uploads parciais e fotos substituídas usando a identidade proprietária. Uma interrupção abrupta do navegador ou da rede ainda pode impedir o cleanup final; o limite de duas versões por slot impede crescimento ilimitado dentro da mesma avaliação. Para garantia operacional completa, agende uma rotina privilegiada que compare `storage.objects` com `evaluations.photos` e remova arquivos antigos não referenciados pela Storage API.
 
-Policies restritivas protegem este bucket contra permissões amplas legadas; pressupõem roles/RLS padrão do Supabase. Funções privilegiadas, views, roles customizadas e dados antigos exigem revisão própria. URLs assinadas já emitidas e caches não são invalidados imediatamente ao revogar membership.
+MIME/extensão não comprovam conteúdo real da imagem; não há inspeção binária, antivírus ou remoção explícita de EXIF no servidor. A recompressão em canvas normalmente elimina metadados, mas isso não deve ser tratado como garantia de segurança. Trate todo conteúdo recebido como não confiável.
 
-**Evolução recomendada:** Edge Function com CAPTCHA validado no servidor, rate limit compartilhado/atômico, quotas de bytes/volume, validação real de imagens e cálculos confiáveis; nessa etapa futura, fechar novamente a escrita anônima direta para não permitir contorno do endpoint.
+Policies restritivas protegem o bucket contra permissões amplas legadas e pressupõem roles/RLS padrão do Supabase. Funções privilegiadas, views, roles customizadas e dados antigos exigem revisão própria. URLs assinadas já emitidas e caches não são invalidados imediatamente ao revogar membership.
+
+**Evolução recomendada se o projeto ganhar tráfego:** Edge Function com CAPTCHA validado no servidor, rate limit compartilhado/atômico, quotas globais, inspeção real de imagens e cálculo confiável no backend.
 
 A organização e a sintaxe dos módulos foram verificadas localmente. O SQL não foi executado e nenhum banco remoto foi acessado; valide a integração em um projeto Supabase de desenvolvimento antes da produção.

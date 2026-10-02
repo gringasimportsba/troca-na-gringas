@@ -10,7 +10,7 @@ const PHOTO_KEYS = Object.freeze(['front', 'back', 'left', 'right', 'detail']);
 let cloudClient;
 
 function hasCloudConfiguration() {
-  return Boolean(
+  return config.mode !== 'local' && config.mode !== 'demo' && Boolean(
     config.supabaseUrl &&
     config.supabaseAnonKey &&
     config.storeId &&
@@ -30,6 +30,21 @@ function getCloudClient() {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
   });
   return cloudClient;
+}
+
+async function ensureSubmissionSession(client) {
+  const { data, error } = await client.auth.getSession();
+  if (error) throw new Error('Não foi possível verificar a sessão de envio.', { cause: error });
+  if (data?.session?.user?.id) return data.session;
+
+  const { data: signed, error: signInError } = await client.auth.signInAnonymously();
+  if (signInError || !signed?.session?.user?.id) {
+    throw new Error(
+      'Não foi possível iniciar o envio seguro. Confirme que o login anônimo está habilitado no Supabase e tente novamente.',
+      { cause: signInError }
+    );
+  }
+  return signed.session;
 }
 
 function storage() {
@@ -144,6 +159,11 @@ function rowFromRecord(record, photoPaths) {
   };
 }
 
+function updateRowFromRecord(record, photoPaths) {
+  const { code, store_id, ...payload } = rowFromRecord(record, photoPaths);
+  return payload;
+}
+
 function photoExtension(type) {
   return type === 'image/png' ? 'png' : type === 'image/webp' ? 'webp' : 'jpg';
 }
@@ -160,76 +180,163 @@ async function dataUrlToPhoto(value) {
   return blob;
 }
 
-async function uploadPhotos(client, code, photos) {
+async function uploadPhoto(client, code, key, value) {
+  const blob = await dataUrlToPhoto(value);
+  const filename = `${key}-${globalThis.crypto.randomUUID()}.${photoExtension(blob.type)}`;
+  const path = `${config.storeId}/${code}/${filename}`;
+  const { error } = await client.storage.from(config.photoBucket).upload(path, blob, {
+    cacheControl: '3600',
+    contentType: blob.type,
+    upsert: false,
+  });
+  if (error) throw error;
+  return path;
+}
+
+async function removePhotos(client, paths) {
+  const uniquePaths = [...new Set((paths || []).filter(Boolean))];
+  if (!uniquePaths.length) return null;
+  try {
+    const { error } = await client.storage.from(config.photoBucket).remove(uniquePaths);
+    return error || null;
+  } catch (error) {
+    return error;
+  }
+}
+
+async function preparePhotos(client, record, previous = null) {
   const paths = {};
   const uploaded = [];
   try {
-    for (const [key, value] of Object.entries(photos || {})) {
-      if (!PHOTO_KEYS.includes(key) || !value) continue;
-      const blob = await dataUrlToPhoto(value);
-      const filename = `${key}-${globalThis.crypto.randomUUID()}.${photoExtension(blob.type)}`;
-      const path = `${config.storeId}/${code}/${filename}`;
-      const { error } = await client.storage.from(config.photoBucket).upload(path, blob, {
-        cacheControl: '3600',
-        contentType: blob.type,
-        upsert: false,
-      });
-      if (error) throw error;
+    for (const key of PHOTO_KEYS) {
+      const value = record.photos?.[key];
+      if (!value) continue;
+
+      const previousPath = previous?.photos?.[key];
+      const previousPreview = previous?.photoPreviews?.[key];
+      if (previousPath && (value === previousPath || value === previousPreview)) {
+        paths[key] = previousPath;
+        continue;
+      }
+
+      const path = await uploadPhoto(client, record.id, key, value);
       uploaded.push(path);
       paths[key] = path;
     }
-    return { paths, uploaded };
+
+    const retained = new Set(Object.values(paths));
+    const obsolete = Object.values(previous?.photos || {}).filter(path => !retained.has(path));
+    return { paths, uploaded, obsolete };
   } catch (cause) {
-    if (uploaded.length) {
-      try { await client.storage.from(config.photoBucket).remove(uploaded); } catch { /* best effort */ }
-    }
+    await removePhotos(client, uploaded);
     throw new Error('Não foi possível enviar as fotos com segurança. Tente novamente.', { cause });
   }
 }
 
 function cloudError(message, cause) {
+  if (String(cause?.message || '').includes('submission rate limit exceeded')) {
+    return new Error('Muitas avaliações foram enviadas em pouco tempo. Aguarde 15 minutos e tente novamente.', { cause });
+  }
   const detail = cause?.message ? ` ${cause.message}` : '';
   return new Error(`${message}${detail}`, { cause });
 }
 
-async function saveCloud(record, client) {
-  const { paths, uploaded } = await uploadPhotos(client, record.id, record.photos);
-  const { error } = await client.from('evaluations').insert(rowFromRecord(record, paths));
-  if (error) {
-    if (uploaded.length) {
-      try { await client.storage.from(config.photoBucket).remove(uploaded); } catch { /* best effort */ }
-    }
-    throw cloudError('Não foi possível salvar a avaliação na nuvem.', error);
+async function updateCloudRecord(client, record, paths) {
+  const { data, error } = await client
+    .from('evaluations')
+    .update(updateRowFromRecord(record, paths))
+    .eq('store_id', config.storeId)
+    .eq('code', record.id)
+    .select('code')
+    .maybeSingle();
+  if (error) throw error;
+  if (!data?.code) {
+    throw new Error('Esta avaliação não está mais disponível para edição. Atualize o atendimento com a equipe.');
   }
-  return { ...record, photos: paths, cloud: true };
+}
+
+async function createCloud(record, client) {
+  const { error: insertError } = await client.from('evaluations').insert(rowFromRecord(record, {}));
+  if (insertError) throw cloudError('Não foi possível iniciar a avaliação na nuvem.', insertError);
+
+  let prepared = { paths: {}, uploaded: [], obsolete: [] };
+  try {
+    prepared = await preparePhotos(client, record);
+    await updateCloudRecord(client, record, prepared.paths);
+  } catch (cause) {
+    await removePhotos(client, prepared.uploaded);
+    await client.from('evaluations').delete()
+      .eq('store_id', config.storeId)
+      .eq('code', record.id);
+    throw cloudError('Não foi possível concluir a avaliação na nuvem.', cause);
+  }
+
+  return {
+    ...record,
+    photos: prepared.paths,
+    photoPreviews: { ...record.photos },
+    cloud: true,
+  };
+}
+
+async function updateCloud(record, previous, client) {
+  const prepared = await preparePhotos(client, record, previous);
+  try {
+    await updateCloudRecord(client, record, prepared.paths);
+  } catch (cause) {
+    await removePhotos(client, prepared.uploaded);
+    throw cloudError('Não foi possível atualizar a avaliação na nuvem.', cause);
+  }
+
+  const cleanupError = await removePhotos(client, prepared.obsolete);
+  return {
+    ...record,
+    photos: prepared.paths,
+    photoPreviews: { ...record.photos },
+    photoCleanupWarning: Boolean(cleanupError),
+    cloud: true,
+  };
+}
+
+function recordForLocalStorage(record) {
+  const { photoPreviews, photoCleanupWarning, photoStorageWarning, ...persisted } = record;
+  return { ...persisted, photos: {}, cloud: false };
 }
 
 function saveLocal(record) {
   const records = readLocalEvaluations();
-  const saved = { ...record, cloud: false };
-  const next = [saved, ...records.filter(item => item.id !== saved.id)];
-  try {
-    writeLocalEvaluations(next);
-  } catch (error) {
-    const withoutPhotos = { ...saved, photos: {}, photoStorageWarning: true };
-    writeLocalEvaluations([withoutPhotos, ...records.filter(item => item.id !== saved.id)]);
-    return withoutPhotos;
-  }
-  return saved;
+  const persisted = recordForLocalStorage(record);
+  writeLocalEvaluations([persisted, ...records.filter(item => item.id !== persisted.id)]);
+  return {
+    ...record,
+    photoPreviews: { ...record.photos },
+    photoStorageWarning: Object.keys(record.photos || {}).length > 0,
+    cloud: false,
+  };
 }
 
 export function cloudConfigured() {
   return hasCloudConfiguration();
 }
 
-export async function saveEvaluation(state, calculation = calculate(state)) {
+export async function saveEvaluation(state, calculation = calculate(state), previousRecord = null) {
   if (hasCloudConfiguration()) {
-    const record = createRecord(state, calculation);
-    return saveCloud(record, getCloudClient());
+    const client = getCloudClient();
+    await ensureSubmissionSession(client);
+    const previous = previousRecord?.cloud && previousRecord.id === state.evaluationId
+      ? previousRecord
+      : null;
+    if (state.evaluationId && !previous) {
+      throw new Error('A sessão de edição desta avaliação foi perdida. Recomece o formulário para criar uma nova avaliação.');
+    }
+    const record = createRecord(state, calculation, previous);
+    return previous ? updateCloud(record, previous, client) : createCloud(record, client);
   }
 
   const records = readLocalEvaluations();
-  const previous = records.find(item => item.id === state.evaluationId) || null;
+  const previous = previousRecord?.id === state.evaluationId
+    ? previousRecord
+    : records.find(item => item.id === state.evaluationId) || null;
   return saveLocal(createRecord(state, calculation, previous));
 }
 
@@ -241,8 +348,8 @@ export async function saveUpgrade(record, productId) {
   const updated = { ...record, upgrade, updatedAt: new Date().toISOString() };
 
   if (hasCloudConfiguration()) {
-    // O código público da avaliação não é autorização para UPDATE. O interesse
-    // segue no contato explícito por WhatsApp até existir um endpoint confiável.
+    // O interesse segue no contato explícito por WhatsApp; o cliente não recebe
+    // permissão para alterar campos operacionais do painel.
     return { ...updated, cloud: true, upgrade: { ...upgrade, synced: false } };
   }
 
@@ -250,8 +357,7 @@ export async function saveUpgrade(record, productId) {
   if (!records.some(item => item.id === record.id)) {
     throw new Error('A avaliação não foi encontrada no armazenamento local.');
   }
-  writeLocalEvaluations(records.map(item => item.id === record.id ? updated : item));
+  const persisted = recordForLocalStorage(updated);
+  writeLocalEvaluations(records.map(item => item.id === record.id ? persisted : item));
   return { ...updated, cloud: false };
 }
-
-export const whatsappNumber = String(config.whatsappNumber || '5571999498939').replace(/\D/g, '');

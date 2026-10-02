@@ -208,7 +208,7 @@
   </footer>
 
   <!-- ===== FAB WHATSAPP ===== -->
-  <a class="lp-wa-fab" href="https://wa.me/5571999498939?text=Ol%C3%A1%2C%20Gringas!%20Quero%20saber%20mais%20sobre%20a%20troca%20do%20meu%20iPhone." target="_blank" rel="noopener" aria-label="Falar com a Gringas no WhatsApp">
+  <a class="lp-wa-fab" href="#" data-whatsapp-link target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" aria-label="Falar com a Gringas no WhatsApp">
     <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#i-whatsapp"/></svg>
   </a>
 
@@ -228,6 +228,16 @@
       menu.addEventListener('click',function(e){if(e.target.tagName==='A')set(false)});
       document.addEventListener('keydown',function(e){if(e.key==='Escape')set(false)});
     })();
+  </script>
+  <script type="module">
+    import { generalWhatsappUrl } from './js/shared/whatsapp.js';
+
+    const whatsappLink = document.querySelector('[data-whatsapp-link]');
+    try {
+      whatsappLink.href = generalWhatsappUrl();
+    } catch {
+      whatsappLink.hidden = true;
+    }
   </script>
 </body>
 </html>
