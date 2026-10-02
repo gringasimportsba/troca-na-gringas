@@ -32,7 +32,6 @@ const baseByModel = Object.freeze(Object.fromEntries(
   deviceEntries.map(([model, price]) => [model, price]),
 ));
 const upgradeProducts = Object.freeze([
-  Object.freeze({ id: '18', name: 'iPhone 18', storage: '256GB', price: 6299 }),
   Object.freeze({ id: '18pro', name: 'iPhone 18 Pro', storage: '256GB', price: 8499 }),
   Object.freeze({ id: '18promax', name: 'iPhone 18 Pro Max', storage: '256GB', price: 9499 }),
   Object.freeze({ id: 'undecided', name: 'Ainda não decidi', storage: '', price: null }),
