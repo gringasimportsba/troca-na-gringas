@@ -108,7 +108,7 @@
       // não deve ter permissão para ler ou alterar avaliações pela API pública.
       const {error}=await client.from('evaluations').insert(row);
       if(error) throw error;
-      return {mode:'cloud'};
+      return {mode:'cloud',photos:photoPaths};
     }catch(error){
       console.error('[GringasCloud] saveEvaluation',error);
       return {mode:'error',error};

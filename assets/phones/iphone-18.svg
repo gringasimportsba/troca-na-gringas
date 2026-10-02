@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 312 620" width="312" height="620">
+  <defs>
+    <linearGradient id="p18-frame" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#888681"/>
+      <stop offset=".06" stop-color="#ebe9e6"/>
+      <stop offset=".14" stop-color="#c8c4bd"/>
+      <stop offset=".86" stop-color="#bdb9b3"/>
+      <stop offset=".95" stop-color="#e2dfdb"/>
+      <stop offset="1" stop-color="#74716d"/>
+    </linearGradient>
+    <linearGradient id="p18-back" x1="0" y1="0" x2=".35" y2="1">
+      <stop offset="0" stop-color="#e8e6e2"/>
+      <stop offset=".45" stop-color="#e4e1dc"/>
+      <stop offset="1" stop-color="#a4a29e"/>
+    </linearGradient>
+    <linearGradient id="p18-sheen" x1="0" y1="0" x2="1" y2=".55">
+      <stop offset="0" stop-color="#fff" stop-opacity=".34"/>
+      <stop offset=".3" stop-color="#fff" stop-opacity=".06"/>
+      <stop offset=".55" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity=".22"/>
+    </linearGradient>
+    <linearGradient id="p18-bump" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eceae6"/>
+      <stop offset=".5" stop-color="#e5e2de"/>
+      <stop offset="1" stop-color="#a09e9a"/>
+    </linearGradient>
+    <radialGradient id="p18-ring" cx=".35" cy=".3" r=".8">
+      <stop offset="0" stop-color="#edebe9"/>
+      <stop offset=".6" stop-color="#bdb9b3"/>
+      <stop offset="1" stop-color="#5e5d5a"/>
+    </radialGradient>
+    <radialGradient id="p18-glass" cx=".42" cy=".38" r=".62">
+      <stop offset="0" stop-color="#3a4a6a"/>
+      <stop offset=".28" stop-color="#141b2b"/>
+      <stop offset=".62" stop-color="#05070c"/>
+      <stop offset="1" stop-color="#000"/>
+    </radialGradient>
+    <radialGradient id="p18-coat" cx=".7" cy=".75" r=".5">
+      <stop offset="0" stop-color="#6f7dff" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#7a5cff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="p18-flash" cx=".4" cy=".35" r=".7">
+      <stop offset="0" stop-color="#fffdf2"/>
+      <stop offset=".55" stop-color="#e9dfc2"/>
+      <stop offset="1" stop-color="#9c937a"/>
+    </radialGradient>
+    <clipPath id="p18-clip"><rect x="6" y="0" width="300" height="620" rx="54"/></clipPath>
+  </defs>
+  <!-- botões laterais -->
+  <rect x="1" y="118" width="7" height="26" rx="3" fill="#b2afa9"/>
+  <rect x="1" y="168" width="7" height="52" rx="3" fill="#b2afa9"/>
+  <rect x="1" y="232" width="7" height="52" rx="3" fill="#b2afa9"/>
+  <rect x="304" y="190" width="7" height="80" rx="3" fill="#b2afa9"/>
+  <!-- aro -->
+  <rect x="6" y="0" width="300" height="620" rx="54" fill="url(#p18-frame)"/>
+  <!-- traseira -->
+  <rect x="11" y="5" width="290" height="610" rx="49" fill="url(#p18-back)"/>
+  <g clip-path="url(#p18-clip)">
+    <rect x="34" y="33" width="68" height="150" rx="34" fill="#000" opacity=".2"/>
+    <rect x="34" y="30" width="68" height="150" rx="34" fill="url(#p18-bump)"/>
+    <rect x="35.5" y="31.5" width="65" height="147" rx="32.5" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="1.5"/>
+    <circle cx="68" cy="67" r="30" fill="url(#p18-ring)"/>
+    <circle cx="68" cy="67" r="25.8" fill="#0b0b0d"/>
+    <circle cx="68" cy="67" r="22.2" fill="url(#p18-glass)"/>
+    <circle cx="68" cy="67" r="22.2" fill="url(#p18-coat)"/>
+    <circle cx="68" cy="67" r="10.799999999999999" fill="#020306" stroke="#26314a" stroke-width="1.5"/>
+    <ellipse cx="59.6" cy="58.0" rx="6.0" ry="3.5999999999999996" fill="#fff" opacity=".55" transform="rotate(-35 59.6 58.0)"/>
+    <circle cx="77.0" cy="74.8" r="1.7999999999999998" fill="#9fb4ff" opacity=".6"/>
+    <circle cx="68" cy="143" r="30" fill="url(#p18-ring)"/>
+    <circle cx="68" cy="143" r="25.8" fill="#0b0b0d"/>
+    <circle cx="68" cy="143" r="22.2" fill="url(#p18-glass)"/>
+    <circle cx="68" cy="143" r="22.2" fill="url(#p18-coat)"/>
+    <circle cx="68" cy="143" r="10.799999999999999" fill="#020306" stroke="#26314a" stroke-width="1.5"/>
+    <ellipse cx="59.6" cy="134.0" rx="6.0" ry="3.5999999999999996" fill="#fff" opacity=".55" transform="rotate(-35 59.6 134.0)"/>
+    <circle cx="77.0" cy="150.8" r="1.7999999999999998" fill="#9fb4ff" opacity=".6"/>
+    <circle cx="130" cy="70" r="11" fill="#6d6d6d" opacity=".5"/>
+    <circle cx="130" cy="70" r="8.8" fill="url(#p18-flash)"/>
+    <circle cx="130" cy="104" r="2.6" fill="#000" opacity=".55"/>
+  </g>
+  <!-- brilho do vidro -->
+  <rect x="11" y="5" width="290" height="610" rx="49" fill="url(#p18-sheen)"/>
+  <rect x="6.75" y=".75" width="298.5" height="618.5" rx="53.25" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="1.5"/>
+</svg>
