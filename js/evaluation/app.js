@@ -89,6 +89,14 @@ function readPhoto(file, maxSide = 1600, quality = 0.82) {
   });
 }
 
+// Posição do valor entre min e max (0 a 1). Lê os limites do próprio input,
+// assim continua certo se alguém mudar min/max no HTML.
+function rangeFill(input) {
+  const min = Number(input.min) || 0;
+  const max = Number(input.max) || 100;
+  return (Number(input.value) - min) / (max - min);
+}
+
 function maskPhone(value) {
   const digits = String(value || '').replace(/\D/g, '').slice(0, 11);
   if (digits.length <= 2) return digits ? `(${digits}` : '';
@@ -231,8 +239,11 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
 
     const battery = root.querySelector('#battery');
     if (battery) {
+      const paintRange = () => battery.style.setProperty('--fill', rangeFill(battery));
+      paintRange(); // pinta o estado inicial antes do primeiro frame
       battery.addEventListener('input', event => {
         state.battery = Number(event.target.value);
+        paintRange();
         root.querySelector('.battery-value').textContent = `${state.battery}%`;
         root.querySelector('.battery-icon span').style.width = `${state.battery}%`;
         syncNextButton();
@@ -367,16 +378,15 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
         break;
       case 9:
         title = 'Agora mostre seu aparelho.';
-        subtitle = 'Frente e traseira são obrigatórias. As outras ajudam a Gringas a confirmar o estado informado.';
+        subtitle = 'Todas as fotos são opcionais, mas ajudam a Gringas a confirmar o estado informado.';
         body = `<div class="photo-grid">${[
           ['front', 'Frente'], ['back', 'Traseira'], ['left', 'Lateral esquerda'],
           ['right', 'Lateral direita'], ['detail', 'Avaria / detalhe'],
         ].map(([key, label]) => {
           const source = safeImageUrl(state.photos[key]);
-          const required = key === 'front' || key === 'back';
-          return `<div class="photo-wrap"><label class="photo-box${source ? ' has-photo' : ''}${required ? ' required' : ''}">${source
+          return `<div class="photo-wrap"><label class="photo-box${source ? ' has-photo' : ''}">${source
             ? `<img src="${escapeHtml(source)}" alt="Foto: ${escapeHtml(label)}">`
-            : `<span class="photo-plus" aria-hidden="true">＋</span><b>${escapeHtml(label)}</b><small>${required ? 'obrigatória' : 'opcional'}</small>`}
+            : `<span class="photo-plus" aria-hidden="true">＋</span><b>${escapeHtml(label)}</b><small>opcional</small>`}
             <input aria-label="Foto: ${escapeHtml(label)}" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" data-photo="${key}"${photoLoading ? ' disabled' : ''}></label>
             ${source ? `<button type="button" class="photo-remove" data-remove-photo="${key}">Remover</button>` : ''}</div>`;
         }).join('')}</div><p class="note">Tire a foto na hora ou escolha da galeria. Prefira um lugar bem iluminado. Envie JPEG, PNG ou WebP de até 20 MB.</p>`;
