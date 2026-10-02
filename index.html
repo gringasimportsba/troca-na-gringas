@@ -34,8 +34,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Montserrat:wght@700;800;900&family=Great+Vibes&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="tokens.css">
-  <link rel="stylesheet" href="landing.css?v=62">
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/landing.css?v=62">
   <link rel="preload" as="image" href="assets/logo-gringas-white.png">
 </head>
 <body>
@@ -208,7 +208,7 @@
   </footer>
 
   <!-- ===== FAB WHATSAPP ===== -->
-  <a class="lp-wa-fab" href="https://wa.me/5571999498939?text=Ol%C3%A1%2C%20Gringas!%20Quero%20saber%20mais%20sobre%20a%20troca%20do%20meu%20iPhone." target="_blank" rel="noopener" aria-label="Falar com a Gringas no WhatsApp">
+  <a class="lp-wa-fab" href="#" data-whatsapp-link target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer" aria-label="Falar com a Gringas no WhatsApp">
     <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><use href="#i-whatsapp"/></svg>
   </a>
 
@@ -219,15 +219,6 @@
     </symbol>
   </svg>
 
-  <script>
-    // Menu do header (hambúrguer)
-    (function(){
-      var btn=document.getElementById('menuBtn'),menu=document.getElementById('siteMenu');
-      function set(open){menu.hidden=!open;btn.setAttribute('aria-expanded',open);btn.classList.toggle('open',open)}
-      btn.addEventListener('click',function(){set(menu.hidden)});
-      menu.addEventListener('click',function(e){if(e.target.tagName==='A')set(false)});
-      document.addEventListener('keydown',function(e){if(e.key==='Escape')set(false)});
-    })();
-  </script>
+  <script type="module" src="js/landing.js"></script>
 </body>
 </html>
