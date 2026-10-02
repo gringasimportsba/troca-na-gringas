@@ -1,0 +1,128 @@
+/* =========================================================
+   GRINGAS TROCA — DESIGN TOKENS
+   Fonte única de cores, tipografia, espaçamentos e sombras.
+   Importado por landing.css (home), styles.css (avaliação)
+   e admin.css (painel). Altere aqui, não nos arquivos de tela.
+   ========================================================= */
+
+:root {
+  /* ---- Tipografia ---- */
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+  --font-display: "Montserrat", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; /* títulos de impacto */
+  --font-script: "Great Vibes", "Brush Script MT", cursive; /* detalhe manuscrito */
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --fw-heavy: 800;
+  --fw-black: 900;
+
+  --fs-2xs: 0.6875rem;  /* 11px — rótulos/kickers */
+  --fs-xs: 0.75rem;     /* 12px */
+  --fs-sm: 0.875rem;    /* 14px */
+  --fs-md: 1rem;        /* 16px — corpo (evita zoom no iOS em inputs) */
+  --fs-lg: 1.125rem;    /* 18px */
+  --fs-xl: 1.375rem;    /* 22px */
+  --fs-2xl: clamp(1.625rem, 1.2rem + 2vw, 2.375rem);   /* títulos de seção */
+  --fs-3xl: clamp(2.25rem, 1.4rem + 4.5vw, 4.5rem);    /* hero */
+  --fs-value: clamp(2.75rem, 2rem + 4vw, 4rem);         /* valor da avaliação */
+
+  --lh-tight: 1.05;
+  --lh-snug: 1.25;
+  --lh-body: 1.55;
+  --ls-tight: -0.04em;
+  --ls-label: 0.16em;
+
+  /* ---- Cores: superfícies (tema escuro da marca) ---- */
+  --c-bg: #080909;
+  --c-surface: #111313;
+  --c-surface-2: #181b1a;
+  --c-surface-3: #202423;
+  --c-line: rgba(255, 255, 255, 0.10);
+  --c-line-strong: rgba(255, 255, 255, 0.18);
+
+  /* ---- Cores: texto ---- */
+  --c-text: #f7f7f4;
+  --c-text-muted: #a9aaa5;
+  --c-text-subtle: #7b7c78;
+  --c-text-on-gold: #140d01;
+
+  /* ---- Cores: marca ---- */
+  --c-gold: #c9932b;
+  --c-gold-light: #e7c777;
+  --c-gold-soft: rgba(201, 147, 43, 0.14);
+  --c-gold-line: rgba(201, 147, 43, 0.45);
+  --g-gold: linear-gradient(135deg, #f0cf82 0%, #c9932f 100%);
+  --g-gold-text: linear-gradient(180deg, #f3d9a0 0%, #d39a4c 45%, #8c5a25 100%);
+  --g-gold-btn: linear-gradient(180deg, #e9bf84 0%, #c98d4f 55%, #a86c34 100%);
+
+  /* ---- Cores: seção clara (modelos aceitos) ---- */
+  --c-cream: #f4f1ec;
+  --c-cream-text: #141414;
+  --c-cream-muted: #5f5c57;
+
+  /* ---- Cores: feedback ---- */
+  --c-success: #2fbf7a;
+  --c-success-soft: rgba(47, 191, 122, 0.12);
+  --c-danger: #ef6b6b;
+  --c-danger-soft: rgba(239, 107, 107, 0.12);
+  --c-info: #6aa2ff;
+  --c-whatsapp: #25d366;
+  --c-whatsapp-soft: rgba(37, 211, 102, 0.12);
+
+  /* ---- Cores: painel admin (tema claro) ---- */
+  --a-bg: #f3f2ee;
+  --a-surface: #ffffff;
+  --a-surface-2: #faf9f6;
+  --a-line: #e5e2da;
+  --a-text: #111111;
+  --a-text-muted: #7a7a76;
+  --a-sidebar: #0f1111;
+
+  /* ---- Espaçamento (escala de 4px) ---- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --sp-12: 48px;
+  --sp-16: 64px;
+  --gutter: clamp(16px, 4vw, 32px);
+
+  /* ---- Raios ---- */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-pill: 999px;
+
+  /* ---- Sombras ---- */
+  --sh-card: 0 18px 50px rgba(0, 0, 0, 0.45);
+  --sh-gold: 0 12px 35px rgba(197, 145, 45, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  --sh-gold-hover: 0 18px 42px rgba(197, 145, 45, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  --sh-light: 0 10px 30px rgba(22, 20, 16, 0.08);
+
+  /* ---- Layout ---- */
+  --w-content: 1100px;
+  --w-narrow: 560px;
+  --header-h: 64px;
+  --tap: 48px; /* alvo mínimo de toque */
+
+  /* ---- Movimento ---- */
+  --ease: cubic-bezier(.2, .7, .2, 1);
+  --t-fast: .15s;
+  --t-base: .25s;
+
+  /* ---- Fundo decorativo padrão ---- */
+  --bg-glow:
+    radial-gradient(circle at 50% -8%, rgba(201, 147, 43, 0.18), transparent 38%),
+    radial-gradient(circle at 100% 55%, rgba(23, 150, 93, 0.06), transparent 30%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --t-fast: 0s; --t-base: 0s; }
+  *, *::before, *::after { animation-duration: 0s !important; transition-duration: 0s !important; }
+}
