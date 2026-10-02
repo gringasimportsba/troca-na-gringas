@@ -1,23 +1,48 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Avaliar meu iPhone - Gringas Troca</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>Avaliar meu iPhone | Gringas Troca</title>
+  <meta name="description" content="Responda algumas perguntas sobre seu iPhone e descubra na hora quanto ele vale como entrada no seu próximo iPhone na Gringas.">
+  <meta name="theme-color" content="#080909">
+  <link rel="canonical" href="https://troca-na-gringas.vercel.app/avaliar.html">
+
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="pt_BR">
+  <meta property="og:site_name" content="Gringas Troca">
+  <meta property="og:title" content="Quanto vale seu iPhone na troca? | Gringas Troca">
+  <meta property="og:description" content="Avalie seu iPhone online em poucos minutos e veja quanto falta para o seu próximo iPhone.">
+  <meta property="og:url" content="https://troca-na-gringas.vercel.app/avaliar.html">
+  <meta property="og:image" content="https://troca-na-gringas.vercel.app/assets/og-image.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="tokens.css">
+  <link rel="stylesheet" href="styles.css?v=59">
 </head>
 <body>
 <div class="app">
   <header class="topbar">
-    <button class="icon-btn" id="backBtn" aria-label="Voltar">&#8592;</button>
-    <div class="brand"><span class="crown">&#9819;</span><b>GRINGAS</b><small>TROCA</small></div>
-    <button class="text-btn" id="restartBtn">Reiniciar</button>
+    <button type="button" class="icon-btn" id="backBtn" aria-label="Voltar">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <a class="brand" href="index.html" aria-label="Gringas Imports — Troca, início"><img class="brand-logo" src="assets/logo-gringas-white.png" alt="Gringas Imports" width="340" height="160"><span class="brand-tag">TROCA</span></a>
+    <button type="button" class="text-btn" id="restartBtn">Recomeçar</button>
   </header>
   <main id="screen"></main>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="config.js?v=56.2"></script>
-<script src="cloud.js?v=56.2"></script>
-<script src="app.js?v=56.2"></script>
+<script src="config.js?v=57"></script>
+<script src="cloud.js?v=57"></script>
+<script src="app.js?v=57"></script>
 </body>
 </html>
