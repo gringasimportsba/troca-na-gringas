@@ -7,6 +7,27 @@ const MAX_PHOTO_BYTES = 6 * 1024 * 1024;
 const PHOTO_TYPES = Object.freeze(['image/jpeg', 'image/png', 'image/webp']);
 const PHOTO_KEYS = Object.freeze(['front', 'back', 'left', 'right', 'detail']);
 
+// ---------------------------------------------------------------------------
+// CONTINGÊNCIA TEMPORÁRIA (INSEGURA) — remover quando o Supabase estiver correto.
+//
+// O envio correto usa uma sessão anônima do Supabase Auth (ver ensureSubmissionSession
+// e createCloud/updateCloud abaixo). Se o login anônimo estiver DESLIGADO no projeto
+// ("anonymous_provider_disabled"), o envio cai no fluxo antigo: fotos + um único INSERT
+// feito pela chave pública, sem sessão. Isso só funciona se o banco ainda tiver as
+// políticas antigas que permitem INSERT para o papel `anon` (SUPABASE_SETUP.sql legado).
+// Com o `supabase/setup.sql` atual aplicado, esse fallback é recusado pela RLS.
+//
+// QUANDO TIVER ACESSO AO SUPABASE (ordem):
+//   1. Authentication → Sign In / Providers → habilite "Anonymous Sign-Ins".
+//   2. Rode `supabase/setup.sql` inteiro no SQL Editor.
+//   3. Mude a flag abaixo para `false` e apague createCloudLegacy() e o `if (!session)`
+//      em saveEvaluation(). Nada mais precisa mudar: o fluxo seguro já está no código.
+//
+// Limitações do fallback: o painel recebe a avaliação normalmente, mas "Voltar e editar"
+// cria uma NOVA avaliação (o visitante não pode atualizar a anterior) e fotos de uma
+// tentativa que falhou não são removidas do Storage.
+const ALLOW_LEGACY_ANONYMOUS_SUBMISSION = true;
+
 let cloudClient;
 
 function hasCloudConfiguration() {
@@ -32,12 +53,23 @@ function getCloudClient() {
   return cloudClient;
 }
 
+function anonymousSignInDisabled(error) {
+  return error?.code === 'anonymous_provider_disabled' ||
+    /anonymous sign-ins are disabled/i.test(String(error?.message || ''));
+}
+
+// Retorna a sessão, ou null quando o login anônimo está desligado e o fallback
+// temporário (ALLOW_LEGACY_ANONYMOUS_SUBMISSION) está ativo.
 async function ensureSubmissionSession(client) {
   const { data, error } = await client.auth.getSession();
   if (error) throw new Error('Não foi possível verificar a sessão de envio.', { cause: error });
   if (data?.session?.user?.id) return data.session;
 
   const { data: signed, error: signInError } = await client.auth.signInAnonymously();
+  if (ALLOW_LEGACY_ANONYMOUS_SUBMISSION && anonymousSignInDisabled(signInError)) {
+    console.warn('[Gringas] Login anônimo desabilitado no Supabase; usando envio temporário sem sessão.');
+    return null;
+  }
   if (signInError || !signed?.session?.user?.id) {
     throw new Error(
       'Não foi possível iniciar o envio seguro. Confirme que o login anônimo está habilitado no Supabase e tente novamente.',
@@ -279,6 +311,26 @@ async function createCloud(record, client) {
   };
 }
 
+// TEMPORÁRIO: fluxo antigo (fotos primeiro, depois um único INSERT, sem select/update/delete).
+async function createCloudLegacy(record, client) {
+  let prepared = { paths: {}, uploaded: [], obsolete: [] };
+  try {
+    prepared = await preparePhotos(client, record);
+    const { error } = await client.from('evaluations').insert(rowFromRecord(record, prepared.paths));
+    if (error) throw error;
+  } catch (cause) {
+    await removePhotos(client, prepared.uploaded); // sem permissão no fluxo legado; melhor esforço
+    throw cloudError('Não foi possível registrar a avaliação na nuvem.', cause);
+  }
+  return {
+    ...record,
+    photos: prepared.paths,
+    photoPreviews: { ...record.photos },
+    cloud: true,
+    legacy: true,
+  };
+}
+
 async function updateCloud(record, previous, client) {
   const prepared = await preparePhotos(client, record, previous);
   try {
@@ -322,7 +374,11 @@ export function cloudConfigured() {
 export async function saveEvaluation(state, calculation = calculate(state), previousRecord = null) {
   if (hasCloudConfiguration()) {
     const client = getCloudClient();
-    await ensureSubmissionSession(client);
+    const session = await ensureSubmissionSession(client);
+    if (!session) {
+      // Sem sessão não há como atualizar a avaliação anterior: cria uma nova com outro código.
+      return createCloudLegacy(createRecord({ ...state, evaluationId: '' }, calculation), client);
+    }
     const previous = previousRecord?.cloud && previousRecord.id === state.evaluationId
       ? previousRecord
       : null;

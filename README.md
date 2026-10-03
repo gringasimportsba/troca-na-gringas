@@ -65,6 +65,12 @@ returning store_id, user_id, role;
 - **Modo local:** avaliações continuam disponíveis no painel local, mas os base64 das fotos nunca são persistidos no `localStorage`. A tela informa essa limitação ao usuário.
 - **Painel:** membros leem somente avaliações/fotos da própria loja; `createSignedUrl` usa a sessão autenticada. Owner/admin/seller atualizam os campos operacionais permitidos; viewer apenas lê. Nenhum membro é provisionado ou promovido pelo frontend.
 
+## Pendências que dependem de acesso ao Supabase
+
+1. Habilitar **Anonymous Sign-Ins** e rodar `supabase/setup.sql`. Enquanto isso não for feito, `js/evaluation/repository.js` usa um envio temporário e inseguro, sem sessão (flag `ALLOW_LEGACY_ANONYMOUS_SUBMISSION`). Depois, mude a flag para `false` e apague `createCloudLegacy()` e o bloco `if (!session)` em `saveEvaluation()`.
+2. Criar tabelas de preços, regras e upgrades (hoje fixos em `js/evaluation/calculator.js`) e passar a editá-los pelo admin.
+3. Calcular a estimativa no servidor (RPC ou Edge Function), em vez de confiar no valor enviado pelo navegador.
+
 ## Limitações e operação
 
 Existe uma proteção básica contra abuso: envio exige Supabase Auth, cada identidade pode criar até cinco avaliações em 15 minutos, o Auth acrescenta seus limites de criação de sessão e cada avaliação possui no máximo cinco slots de foto, com até duas versões temporárias por slot. Isso reduz spam acidental e abuso simples, mas **não substitui CAPTCHA, WAF ou rate limit por IP compartilhado**; um atacante distribuído ainda pode criar sessões diferentes. Monitore volume, usuários anônimos e custos, e defina uma política de retenção.
