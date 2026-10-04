@@ -24,6 +24,25 @@ export function evaluationWhatsappUrl(record, formattedValue) {
   );
 }
 
+// Contingência: o envio para a nuvem falhou, então a avaliação vai completa pela mensagem.
+export function evaluationFallbackWhatsappUrl(state, formattedValue) {
+  const battery = typeof state.battery === 'number' ? `${state.battery}%` : 'não informada';
+  return whatsappUrl([
+    'Olá, Gringas! Fiz a avaliação no site, mas o envio falhou. Seguem os dados:',
+    `Nome: ${state.name}`,
+    `WhatsApp: ${state.phone}`,
+    `Aparelho: ${state.model} ${state.storage} • bateria ${battery}`,
+    `Estado: ${state.condition} • Tela: ${state.screen}`,
+    `Funções com problema: ${state.issues.join(', ') || 'nenhuma'}`,
+    `Manutenção: ${state.repair} • Aviso de peça: ${state.partAlert}`,
+    `Garantia Apple: ${state.warranty || 'não informada'}`,
+    `Acompanha: ${state.accessories.join(', ') || 'somente o aparelho'}`,
+    state.notes ? `Observações: ${state.notes}` : '',
+    `Estimativa do site: ${formattedValue}`,
+    'Posso enviar as fotos por aqui.',
+  ].filter(Boolean).join('\n'));
+}
+
 export function upgradeWhatsappUrl(record, formattedTradeValue, formattedDifference) {
   const upgrade = record.upgrade;
   const difference = upgrade.difference === null
