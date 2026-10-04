@@ -172,11 +172,15 @@ function photoExtension(type) {
 }
 
 async function dataUrlToPhoto(value) {
-  if (typeof value !== 'string' || !/^data:image\/(?:jpeg|png|webp);base64,/i.test(value)) {
+  const match = typeof value === 'string' && /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/i.exec(value);
+  if (!match) {
     throw new Error('Foto inválida. Envie novamente em JPEG, PNG ou WebP.');
   }
-  const response = await fetch(value);
-  const blob = await response.blob();
+  // Decodifica sem fetch(): a CSP (connect-src em vercel.json) bloqueia requisições a data: URLs.
+  const binary = atob(match[2]);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  const blob = new Blob([bytes], { type: match[1].toLowerCase() });
   if (!PHOTO_TYPES.includes(blob.type) || blob.size <= 0 || blob.size > MAX_PHOTO_BYTES) {
     throw new Error('Cada foto deve ser JPEG, PNG ou WebP e ter no máximo 6 MB.');
   }
