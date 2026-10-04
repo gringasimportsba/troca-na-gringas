@@ -392,6 +392,9 @@ textarea.input { resize: vertical; min-height: 120px; line-height: var(--lh-body
   font-variant-numeric: tabular-nums;
 }
 .value-sub { color: var(--c-text-muted); font-size: var(--fs-sm); }
+.value-title { margin: var(--sp-2) 0 0; font-size: var(--fs-md); font-weight: var(--fw-bold); }
+.value-callout { margin-top: var(--sp-4); font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+.result-code { word-break: break-all; }
 .value-card.manual { border-color: var(--c-line-strong); background: var(--c-surface); }
 .value-card.manual .value-amount { background: none; color: var(--c-text); }
 .manual-list { margin: var(--sp-4) 0 0; padding: var(--sp-3) var(--sp-4); list-style: none; border-radius: var(--r-md); background: var(--c-surface-2); text-align: left; font-size: var(--fs-xs); color: var(--c-text-muted); }
@@ -415,6 +418,7 @@ textarea.input { resize: vertical; min-height: 120px; line-height: var(--lh-body
 .summary-row dt { color: var(--c-text-muted); }
 .summary-row dd { margin: 0; font-weight: var(--fw-semibold); text-align: right; }
 .summary-notes { padding: var(--sp-3) var(--sp-4); border-top: 1px solid var(--c-line); font-size: var(--fs-sm); }
+.summary-card dl.summary-notes { padding: var(--sp-3) var(--sp-4); }
 .summary-notes dt { color: var(--c-text-muted); margin-bottom: 4px; }
 .summary-notes dd { margin: 0; white-space: pre-wrap; }
 .summary-card .btn { width: calc(100% - var(--sp-8)); margin: var(--sp-3) var(--sp-4) var(--sp-4); }
