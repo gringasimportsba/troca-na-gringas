@@ -480,25 +480,24 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
         ? '<div class="note">A avaliação foi atualizada, mas uma foto substituída não pôde ser removida. Avise a equipe se o problema persistir.</div>'
         : '';
 
-    root.innerHTML = `<section class="screen result-screen"><div class="result-kicker">SUA AVALIAÇÃO FICOU PRONTA</div>
-      <div class="result-device"><span class="result-phone-art"></span><div><b>${escapeHtml(record.device.model)}</b><small>${escapeHtml(record.device.storage)}</small></div></div>
+    root.innerHTML = `<section class="screen result-screen">
+      <div class="result-head"><span class="pill">SUA AVALIAÇÃO FICOU PRONTA</span>
+        <div class="result-device"><span class="mini-phone lg" aria-hidden="true"></span><div><b>${escapeHtml(record.device.model)}</b><small>${escapeHtml(record.device.storage)}</small></div></div></div>
       ${calculation.isManual
-        ? `<div class="manual-card"><span>ANÁLISE ESPECIAL</span><h1>Precisamos confirmar alguns detalhes do seu iPhone.</h1><p>A Gringas fará uma análise antes de confirmar o valor. Sua referência inicial é de <b>${money(calculation.estimated)}</b>.</p></div>`
-        : `<div class="value-label">SEU IPHONE PODE VALER ATÉ</div><div class="result-value">${money(calculation.estimated)}</div><div class="value-sub">como entrada na Gringas.</div><div class="result-callout">🔥 Seu próximo iPhone está mais perto.</div>`}
-      <div class="evaluation-code">Avaliação <b>${escapeHtml(record.id)}</b></div>
+        ? `<div class="value-card manual"><span class="value-label">ANÁLISE ESPECIAL</span><p class="value-title">Precisamos confirmar alguns detalhes do seu iPhone.</p><div class="value-amount">${money(calculation.estimated)}</div><p class="value-sub">Sua referência inicial. A Gringas fará uma análise antes de confirmar o valor.</p></div>`
+        : `<div class="value-card"><span class="value-label">SEU IPHONE PODE VALER ATÉ</span><div class="value-amount">${money(calculation.estimated)}</div><p class="value-sub">como entrada na Gringas.</p><p class="value-callout">🔥 Seu próximo iPhone está mais perto.</p></div>`}
       ${persistenceWarning}
-      <div class="demo-warning">⚠️ Valores demonstrativos para validar o motor. A condição final será confirmada pela Gringas.</div>
-      <div class="summary-card"><h3>Dados complementares</h3>
-        <div class="summary-row"><span>📸 Fotos</span><b>${Object.keys(record.photos || {}).length}</b></div>
-        <div class="summary-row"><span>🍎 Garantia Apple</span><b>${escapeHtml(warrantyLabel)}</b></div>
-        <div class="summary-row"><span>🛡️ AppleCare+</span><b>${escapeHtml(warranty.appleCare || '—')}</b></div>
-        <div class="summary-row"><span>📦 Acompanha</span><b>${escapeHtml(record.accessories.join(', ') || 'Somente aparelho')}</b></div>
-        <div class="summary-notes"><span>📝 Observações</span><p>${escapeHtml(record.notes || 'Nenhuma observação.')}</p></div>
-      </div>
-      <div class="footer-actions result-actions"><button type="button" class="btn primary gold" id="upgrade">QUERO FAZER MEU UPGRADE →</button>
-        <button type="button" class="btn ghost" id="edit">VOLTAR E EDITAR</button>
+      <div class="result-actions"><button type="button" class="btn primary" id="upgrade">QUERO FAZER MEU UPGRADE →</button>
         <a class="btn whatsapp" href="${escapeHtml(whatsappHref)}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">FALAR COM A GRINGAS →</a></div>
-      <p class="legal">Valor estimado com base nas informações fornecidas. O WhatsApp abre somente ao clicar e a mensagem não inclui links das fotos.</p></section>`;
+      <details class="summary-card"><summary><span>Dados complementares</span><span class="chev" aria-hidden="true"></span></summary>
+        <dl><div class="summary-row"><dt>📸 Fotos</dt><dd>${Object.keys(record.photos || {}).length}</dd></div>
+          <div class="summary-row"><dt>🍎 Garantia Apple</dt><dd>${escapeHtml(warrantyLabel)}</dd></div>
+          <div class="summary-row"><dt>🛡️ AppleCare+</dt><dd>${escapeHtml(warranty.appleCare || '—')}</dd></div>
+          <div class="summary-row"><dt>📦 Acompanha</dt><dd>${escapeHtml(record.accessories.join(', ') || 'Somente aparelho')}</dd></div></dl>
+        <dl class="summary-notes"><dt>📝 Observações</dt><dd>${escapeHtml(record.notes || 'Nenhuma observação.')}</dd></dl>
+        <button type="button" class="btn ghost small" id="edit">VOLTAR E EDITAR</button></details>
+      <p class="note">⚠️ Valores demonstrativos para validar o motor. A condição final será confirmada pela Gringas.</p>
+      <p class="legal">Avaliação <span class="result-code">${escapeHtml(record.id)}</span><br>Valor estimado com base nas informações fornecidas. O WhatsApp abre somente ao clicar e a mensagem não inclui links das fotos.</p></section>`;
 
     root.querySelector('#edit').addEventListener('click', () => {
       state.step = 11;
