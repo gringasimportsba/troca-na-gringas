@@ -1,5 +1,5 @@
 import { config } from '../config.js';
-import { calculate, calculateUpgrade } from './calculator.js';
+import { calculate, calculateUpgrade, rules } from './calculator.js';
 
 const HISTORY_KEY = 'gringasTrocaEvaluationsV55';
 const MAX_LOCAL_RECORDS = 150;
@@ -7,26 +7,8 @@ const MAX_PHOTO_BYTES = 6 * 1024 * 1024;
 const PHOTO_TYPES = Object.freeze(['image/jpeg', 'image/png', 'image/webp']);
 const PHOTO_KEYS = Object.freeze(['front', 'back', 'left', 'right', 'detail']);
 
-// ---------------------------------------------------------------------------
-// CONTINGÊNCIA TEMPORÁRIA (INSEGURA) — remover quando o Supabase estiver correto.
-//
-// O envio correto usa uma sessão anônima do Supabase Auth (ver ensureSubmissionSession
-// e createCloud/updateCloud abaixo). Se o login anônimo estiver DESLIGADO no projeto
-// ("anonymous_provider_disabled"), o envio cai no fluxo antigo: fotos + um único INSERT
-// feito pela chave pública, sem sessão. Isso só funciona se o banco ainda tiver as
-// políticas antigas que permitem INSERT para o papel `anon` (SUPABASE_SETUP.sql legado).
-// Com o `supabase/setup.sql` atual aplicado, esse fallback é recusado pela RLS.
-//
-// QUANDO TIVER ACESSO AO SUPABASE (ordem):
-//   1. Authentication → Sign In / Providers → habilite "Anonymous Sign-Ins".
-//   2. Rode `supabase/setup.sql` inteiro no SQL Editor.
-//   3. Mude a flag abaixo para `false` e apague createCloudLegacy() e o `if (!session)`
-//      em saveEvaluation(). Nada mais precisa mudar: o fluxo seguro já está no código.
-//
-// Limitações do fallback: o painel recebe a avaliação normalmente, mas "Voltar e editar"
-// cria uma NOVA avaliação (o visitante não pode atualizar a anterior) e fotos de uma
-// tentativa que falhou não são removidas do Storage.
-const ALLOW_LEGACY_ANONYMOUS_SUBMISSION = true;
+// Envio: sessão anônima do Supabase Auth + `supabase/setup.sql` aplicado. O banco recalcula
+// a estimativa (trigger calculate_evaluation_values) e o valor exibido é o devolvido por ele.
 
 let cloudClient;
 
@@ -53,23 +35,12 @@ function getCloudClient() {
   return cloudClient;
 }
 
-function anonymousSignInDisabled(error) {
-  return error?.code === 'anonymous_provider_disabled' ||
-    /anonymous sign-ins are disabled/i.test(String(error?.message || ''));
-}
-
-// Retorna a sessão, ou null quando o login anônimo está desligado e o fallback
-// temporário (ALLOW_LEGACY_ANONYMOUS_SUBMISSION) está ativo.
 async function ensureSubmissionSession(client) {
   const { data, error } = await client.auth.getSession();
   if (error) throw new Error('Não foi possível verificar a sessão de envio.', { cause: error });
   if (data?.session?.user?.id) return data.session;
 
   const { data: signed, error: signInError } = await client.auth.signInAnonymously();
-  if (ALLOW_LEGACY_ANONYMOUS_SUBMISSION && anonymousSignInDisabled(signInError)) {
-    console.warn('[Gringas] Login anônimo desabilitado no Supabase; usando envio temporário sem sessão.');
-    return null;
-  }
   if (signInError || !signed?.session?.user?.id) {
     throw new Error(
       'Não foi possível iniciar o envio seguro. Confirme que o login anônimo está habilitado no Supabase e tente novamente.',
@@ -273,18 +244,33 @@ function cloudError(message, cause) {
   return new Error(`${message}${detail}`, { cause });
 }
 
+// Cálculo oficial, devolvido pelo banco. `cap` não é gravado, então é derivado da base.
+function calculationFromRow(row) {
+  const base = Number(row.base_value);
+  return {
+    base,
+    totalDiscount: Number(row.total_discount),
+    cap: Math.round(base * rules.maximumDiscountRate),
+    estimated: Number(row.estimated_value),
+    isManual: Boolean(row.manual_review),
+    manual: Array.isArray(row.manual_reasons) ? row.manual_reasons : [],
+    lines: Array.isArray(row.calculation_lines) ? row.calculation_lines : [],
+  };
+}
+
 async function updateCloudRecord(client, record, paths) {
   const { data, error } = await client
     .from('evaluations')
     .update(updateRowFromRecord(record, paths))
     .eq('store_id', config.storeId)
     .eq('code', record.id)
-    .select('code')
+    .select('code,base_value,total_discount,estimated_value,manual_review,manual_reasons,calculation_lines')
     .maybeSingle();
   if (error) throw error;
   if (!data?.code) {
     throw new Error('Esta avaliação não está mais disponível para edição. Atualize o atendimento com a equipe.');
   }
+  return calculationFromRow(data);
 }
 
 async function createCloud(record, client) {
@@ -292,9 +278,10 @@ async function createCloud(record, client) {
   if (insertError) throw cloudError('Não foi possível iniciar a avaliação na nuvem.', insertError);
 
   let prepared = { paths: {}, uploaded: [], obsolete: [] };
+  let calculation;
   try {
     prepared = await preparePhotos(client, record);
-    await updateCloudRecord(client, record, prepared.paths);
+    calculation = await updateCloudRecord(client, record, prepared.paths);
   } catch (cause) {
     await removePhotos(client, prepared.uploaded);
     await client.from('evaluations').delete()
@@ -305,36 +292,18 @@ async function createCloud(record, client) {
 
   return {
     ...record,
+    calculation,
     photos: prepared.paths,
     photoPreviews: { ...record.photos },
     cloud: true,
-  };
-}
-
-// TEMPORÁRIO: fluxo antigo (fotos primeiro, depois um único INSERT, sem select/update/delete).
-async function createCloudLegacy(record, client) {
-  let prepared = { paths: {}, uploaded: [], obsolete: [] };
-  try {
-    prepared = await preparePhotos(client, record);
-    const { error } = await client.from('evaluations').insert(rowFromRecord(record, prepared.paths));
-    if (error) throw error;
-  } catch (cause) {
-    await removePhotos(client, prepared.uploaded); // sem permissão no fluxo legado; melhor esforço
-    throw cloudError('Não foi possível registrar a avaliação na nuvem.', cause);
-  }
-  return {
-    ...record,
-    photos: prepared.paths,
-    photoPreviews: { ...record.photos },
-    cloud: true,
-    legacy: true,
   };
 }
 
 async function updateCloud(record, previous, client) {
   const prepared = await preparePhotos(client, record, previous);
+  let calculation;
   try {
-    await updateCloudRecord(client, record, prepared.paths);
+    calculation = await updateCloudRecord(client, record, prepared.paths);
   } catch (cause) {
     await removePhotos(client, prepared.uploaded);
     throw cloudError('Não foi possível atualizar a avaliação na nuvem.', cause);
@@ -343,6 +312,7 @@ async function updateCloud(record, previous, client) {
   const cleanupError = await removePhotos(client, prepared.obsolete);
   return {
     ...record,
+    calculation,
     photos: prepared.paths,
     photoPreviews: { ...record.photos },
     photoCleanupWarning: Boolean(cleanupError),
@@ -374,11 +344,7 @@ export function cloudConfigured() {
 export async function saveEvaluation(state, calculation = calculate(state), previousRecord = null) {
   if (hasCloudConfiguration()) {
     const client = getCloudClient();
-    const session = await ensureSubmissionSession(client);
-    if (!session) {
-      // Sem sessão não há como atualizar a avaliação anterior: cria uma nova com outro código.
-      return createCloudLegacy(createRecord({ ...state, evaluationId: '' }, calculation), client);
-    }
+    await ensureSubmissionSession(client);
     const previous = previousRecord?.cloud && previousRecord.id === state.evaluationId
       ? previousRecord
       : null;

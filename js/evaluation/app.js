@@ -1,6 +1,6 @@
 import { catalog, rules, calculate, calculateUpgrade } from './calculator.js';
 import { saveEvaluation, saveUpgrade } from './repository.js';
-import { evaluationWhatsappUrl, upgradeWhatsappUrl } from '../shared/whatsapp.js';
+import { evaluationWhatsappUrl, evaluationFallbackWhatsappUrl, upgradeWhatsappUrl } from '../shared/whatsapp.js';
 import * as validation from '../shared/validation.js';
 import * as sanitization from '../shared/sanitization.js';
 
@@ -201,6 +201,15 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
     syncNextButton();
   }
 
+  // Se o envio falhar, oferece mandar a avaliação pelo WhatsApp para o lead não se perder.
+  function showWhatsappFallback(calculation) {
+    const actions = root.querySelector('.footer-actions');
+    if (!actions || actions.querySelector('[data-whatsapp-fallback]')) return;
+    let href;
+    try { href = evaluationFallbackWhatsappUrl(state, money(calculation.estimated)); } catch { return; }
+    actions.insertAdjacentHTML('beforeend', `<a class="btn whatsapp" data-whatsapp-fallback href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">ENVIAR AVALIAÇÃO PELO WHATSAPP →</a>`);
+  }
+
   async function next() {
     const stepError = validateStep(state);
     if (stepError) {
@@ -228,8 +237,9 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
     syncNextButton();
     const submit = root.querySelector('[data-next]');
     if (submit) submit.textContent = 'SALVANDO...';
+    let calculation = null;
     try {
-      const calculation = calculate(state);
+      calculation = calculate(state);
       record = await saveEvaluation(state, calculation, record);
       saving = false;
       state.evaluationId = record.id;
@@ -241,6 +251,7 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
       saving = false;
       if (submit) submit.textContent = 'CALCULAR MINHA AVALIAÇÃO →';
       showError(root, error.message || 'Não foi possível concluir a avaliação.');
+      if (calculation) showWhatsappFallback(calculation);
       syncNextButton();
     }
   }
@@ -485,7 +496,6 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
         <div class="summary-notes"><span>📝 Observações</span><p>${escapeHtml(record.notes || 'Nenhuma observação.')}</p></div>
       </div>
       <div class="footer-actions result-actions"><button type="button" class="btn primary gold" id="upgrade">QUERO FAZER MEU UPGRADE →</button>
-        <button type="button" class="btn ghost" id="diagnostic">VER DIAGNÓSTICO DO CÁLCULO</button>
         <button type="button" class="btn ghost" id="edit">VOLTAR E EDITAR</button>
         <a class="btn whatsapp" href="${escapeHtml(whatsappHref)}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">FALAR COM A GRINGAS →</a></div>
       <p class="legal">Valor estimado com base nas informações fornecidas. O WhatsApp abre somente ao clicar e a mensagem não inclui links das fotos.</p></section>`;
@@ -495,24 +505,7 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
       pushNavigation('wizard', 11);
       render();
     });
-    root.querySelector('#diagnostic').addEventListener('click', renderDiagnostic);
     root.querySelector('#upgrade').addEventListener('click', showUpgrade);
-  }
-
-  function renderDiagnostic() {
-    const calculation = record.calculation;
-    root.innerHTML = `<section class="screen"><span class="pill">DIAGNÓSTICO 5.6</span>
-      <h1 class="question">Como o sistema chegou ao valor.</h1><p class="sub">Confira os critérios usados na estimativa.</p>
-      <div class="calc-card"><div class="calc-row"><span>Valor-base demonstrativo</span><b>${money(calculation.base)}</b></div>
-        ${calculation.lines.length ? calculation.lines.map(line => `<div class="calc-row deduction"><span>${escapeHtml(line.label)}</span><b>− ${money(line.amount)}</b></div>`).join('') : '<div class="calc-row"><span>Descontos automáticos</span><b>R$ 0</b></div>'}
-        <div class="calc-row"><span>Total calculado</span><b>${money(calculation.totalDiscount)}</b></div>
-        <div class="calc-row"><span>Limite aplicado (30%)</span><b>${money(calculation.cap)}</b></div>
-        <div class="calc-row total"><span>Estimativa</span><b>${money(calculation.estimated)}</b></div></div>
-      ${calculation.isManual
-        ? `<div class="manual-reasons"><b>Encaminhado para análise manual porque:</b>${calculation.manual.map(reason => `<span>• ${escapeHtml(reason)}</span>`).join('')}</div>`
-        : '<div class="success-note">✓ Nenhuma regra de análise manual foi acionada.</div>'}
-      <div class="footer-actions"><button type="button" class="btn primary" id="backResult">VOLTAR AO RESULTADO →</button></div></section>`;
-    root.querySelector('#backResult').addEventListener('click', renderResult);
   }
 
   function showUpgrade({ push = true } = {}) {

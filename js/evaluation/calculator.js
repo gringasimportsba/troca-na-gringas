@@ -1,3 +1,7 @@
+// Modelos, preços e regras. No modo cloud o cálculo oficial é feito pelo banco
+// (supabase/setup.sql, tabelas pricing_models e pricing_rules); estes valores servem para
+// montar as opções do formulário e para o modo local. Ao adicionar um modelo ou mudar uma
+// regra, altere aqui E no banco, senão o envio de avaliações desse modelo é recusado.
 const deviceEntries = [
   ['iPhone 11', 900, ['64 GB', '128 GB', '256 GB']],
   ['iPhone 11 Pro', 1150, ['64 GB', '256 GB', '512 GB']],
