@@ -89,6 +89,27 @@ nav { display: grid; gap: 4px; }
 .logout-btn:hover { border-color: #e2b4b4; color: #a72c2c; }
 .logout-btn span { display: none; }
 
+/* ---- Modal de confirmação (Sair) ---- */
+.confirm-modal {
+  width: min(400px, calc(100% - 32px));
+  padding: 0;
+  border: 1px solid var(--a-line);
+  border-radius: var(--r-lg);
+  background: var(--a-surface);
+  color: var(--a-text);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .25);
+}
+.confirm-modal::backdrop { background: rgba(15, 17, 17, .45); backdrop-filter: blur(3px); }
+.confirm-modal__box { display: grid; gap: var(--sp-3); padding: var(--sp-6) var(--sp-5) var(--sp-5); }
+.confirm-modal h2 { font-size: var(--fs-lg); font-weight: var(--fw-black); letter-spacing: -.02em; }
+.confirm-modal p { color: var(--a-text-muted); font-size: var(--fs-sm); }
+.confirm-modal__actions { display: flex; gap: var(--sp-3); margin-top: var(--sp-3); }
+.confirm-modal__actions button { flex: 1; min-height: 44px; border-radius: var(--r-sm); font-size: var(--fs-xs); font-weight: var(--fw-black); }
+.confirm-modal__cancel { border: 1px solid var(--a-line); background: var(--a-surface); }
+.confirm-modal__cancel:hover { border-color: #cfcabf; }
+.confirm-modal__ok { border: 0; background: #111; color: #fff; }
+.confirm-modal__ok:hover { background: #a72c2c; }
+
 /* ===== CONTEÚDO ===== */
 #content { padding: var(--sp-4) var(--sp-4) var(--sp-10); }
 .section-title { margin: var(--sp-1) 0 var(--sp-3); font-size: var(--fs-lg); }

@@ -8,6 +8,38 @@ let evaluations = [];
 let authenticated = repository.mode === 'local';
 let loginMessage = '';
 
+// Modal de confirmação no visual do painel, no lugar do confirm() do navegador.
+// O <dialog> com showModal() já prende o foco, fecha com Esc e bloqueia o fundo.
+// Resolve true só quando a pessoa escolhe "Sair".
+function confirmarSaida() {
+  if (typeof HTMLDialogElement === 'undefined' || typeof HTMLDialogElement.prototype.showModal !== 'function') {
+    return Promise.resolve(confirm('Sair do painel administrativo?'));
+  }
+  return new Promise((resolve) => {
+    const dialog = document.createElement('dialog');
+    dialog.className = 'confirm-modal';
+    dialog.setAttribute('aria-labelledby', 'confirmModalTitle');
+    dialog.setAttribute('aria-describedby', 'confirmModalText');
+    dialog.innerHTML = `
+      <form method="dialog" class="confirm-modal__box">
+        <h2 id="confirmModalTitle">Sair do painel?</h2>
+        <p id="confirmModalText">Sua sessão será encerrada e você precisará entrar novamente para acessar o painel.</p>
+        <div class="confirm-modal__actions">
+          <button type="submit" value="cancel" class="confirm-modal__cancel" autofocus>Cancelar</button>
+          <button type="submit" value="ok" class="confirm-modal__ok">Sair</button>
+        </div>
+      </form>`;
+    // clique fora da caixa (no fundo escurecido) cancela
+    dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close('cancel'); });
+    dialog.addEventListener('close', () => {
+      resolve(dialog.returnValue === 'ok');
+      dialog.remove();
+    }, { once: true });
+    document.body.append(dialog);
+    dialog.showModal();
+  });
+}
+
 const $ = selector => document.querySelector(selector);
 const statusClasses = new Map(statuses.map(status => [status, status.replaceAll(' ', '-')]));
 
@@ -658,7 +690,7 @@ async function initialize() {
   headActions.prepend(refreshButton);
 
   const logout = async () => {
-    if (!confirm('Sair do painel administrativo?')) return;
+    if (!(await confirmarSaida())) return;
     try { await repository.signOut(); }
     finally {
       authenticated = false;
