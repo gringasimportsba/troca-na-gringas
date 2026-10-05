@@ -10,10 +10,10 @@ let loginMessage = '';
 
 // Modal de confirmação no visual do painel, no lugar do confirm() do navegador.
 // O <dialog> com showModal() já prende o foco, fecha com Esc e bloqueia o fundo.
-// Resolve true só quando a pessoa escolhe "Sair".
-function confirmarSaida() {
+// Resolve true só quando a pessoa escolhe o botão de confirmar.
+function confirmModal({ title, text, confirmLabel, fallback }) {
   if (typeof HTMLDialogElement === 'undefined' || typeof HTMLDialogElement.prototype.showModal !== 'function') {
-    return Promise.resolve(confirm('Sair do painel administrativo?'));
+    return Promise.resolve(confirm(fallback));
   }
   return new Promise((resolve) => {
     const dialog = document.createElement('dialog');
@@ -22,11 +22,11 @@ function confirmarSaida() {
     dialog.setAttribute('aria-describedby', 'confirmModalText');
     dialog.innerHTML = `
       <form method="dialog" class="confirm-modal__box">
-        <h2 id="confirmModalTitle">Sair do painel?</h2>
-        <p id="confirmModalText">Sua sessão será encerrada e você precisará entrar novamente para acessar o painel.</p>
+        <h2 id="confirmModalTitle">${escapeHtml(title)}</h2>
+        <p id="confirmModalText">${escapeHtml(text)}</p>
         <div class="confirm-modal__actions">
           <button type="submit" value="cancel" class="confirm-modal__cancel" autofocus>Cancelar</button>
-          <button type="submit" value="ok" class="confirm-modal__ok">Sair</button>
+          <button type="submit" value="ok" class="confirm-modal__ok">${escapeHtml(confirmLabel)}</button>
         </div>
       </form>`;
     // clique fora da caixa (no fundo escurecido) cancela
@@ -37,6 +37,15 @@ function confirmarSaida() {
     }, { once: true });
     document.body.append(dialog);
     dialog.showModal();
+  });
+}
+
+function confirmarSaida() {
+  return confirmModal({
+    title: 'Sair do painel?',
+    text: 'Sua sessão será encerrada e você precisará entrar novamente para acessar o painel.',
+    confirmLabel: 'Sair',
+    fallback: 'Sair do painel administrativo?',
   });
 }
 
@@ -446,6 +455,7 @@ function hideLogin() {
 }
 
 function showLogin(message = '') {
+  pendingChanges = () => false;
   authenticated = false;
   evaluations = [];
   closeDrawer();
@@ -501,8 +511,13 @@ async function refreshEvaluations() {
   renderView();
 }
 
-function confirmDiscardChanges() {
-  return !pendingChanges() || confirm('Há alterações não salvas nesta tela. Sair sem salvar?');
+async function confirmDiscardChanges() {
+  return !pendingChanges() || confirmModal({
+    title: 'Sair sem salvar?',
+    text: 'As alterações feitas nesta tela ainda não foram salvas e serão perdidas.',
+    confirmLabel: 'Sair sem salvar',
+    fallback: 'Há alterações não salvas nesta tela. Sair sem salvar?',
+  });
 }
 
 function renderView() {
@@ -648,8 +663,8 @@ function updateSessionControls() {
 
 async function initialize() {
   document.querySelectorAll('.nav').forEach(item => {
-    item.onclick = () => {
-      if (!confirmDiscardChanges()) return;
+    item.onclick = async () => {
+      if (!(await confirmDiscardChanges())) return;
       currentView = item.dataset.view;
       closeDrawer();
       renderView();
@@ -673,7 +688,7 @@ async function initialize() {
   refreshButton.className = 'admin-pill';
   refreshButton.textContent = 'Atualizar';
   refreshButton.onclick = async () => {
-    if (!confirmDiscardChanges()) return;
+    if (!(await confirmDiscardChanges())) return;
     try { await refreshEvaluations(); }
     catch (error) {
       loginMessage = error?.message || 'Não foi possível atualizar.';
