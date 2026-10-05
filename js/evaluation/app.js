@@ -1,5 +1,5 @@
 import { catalog, rules, calculate, calculateUpgrade } from './calculator.js';
-import { saveEvaluation, saveUpgrade } from './repository.js';
+import { saveEvaluation, saveUpgrade, loadUpgradeProducts } from './repository.js';
 import { evaluationWhatsappUrl, evaluationFallbackWhatsappUrl, upgradeWhatsappUrl } from '../shared/whatsapp.js';
 import * as validation from '../shared/validation.js';
 import * as sanitization from '../shared/sanitization.js';
@@ -149,6 +149,7 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
   let saving = false;
   let photoLoading = false;
   let closeUpgrade = null;
+  let upgradeProducts = null;
   let currentView = 'wizard';
   let renderedStep = null;
 
@@ -507,17 +508,23 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
     root.querySelector('#upgrade').addEventListener('click', showUpgrade);
   }
 
-  function showUpgrade({ push = true } = {}) {
+  async function showUpgrade({ push = true } = {}) {
     currentView = 'upgrade';
     if (push) pushNavigation('upgrade', 12);
-    let selected = record.upgrade?.productId || '';
+    if (!upgradeProducts) {
+      root.innerHTML = '<section class="screen upgrade-screen"><span class="pill">SEU UPGRADE</span><p class="sub">Carregando os iPhones disponíveis...</p></section>';
+      upgradeProducts = await loadUpgradeProducts();
+      if (currentView !== 'upgrade') return;
+    }
+    const products = upgradeProducts;
+    let selected = products.some(product => product.id === record.upgrade?.productId) ? record.upgrade.productId : '';
 
     const draw = () => {
-      const value = selected ? calculateUpgrade(selected, record.calculation.estimated) : null;
+      const value = selected ? calculateUpgrade(selected, record.calculation.estimated, products) : null;
       root.innerHTML = `<section class="screen upgrade-screen"><span class="pill">SEU UPGRADE</span>
         <h1 class="question">Escolha seu próximo iPhone.</h1>
         <div class="screen-body"><div class="credit-chip"><span>Crédito do seu ${escapeHtml(record.device.model)}</span><b>${money(record.calculation.estimated)}</b></div>
-        <div class="products">${catalog.upgradeProducts.map(product => `<button type="button" class="product${selected === product.id ? ' selected' : ''}" data-product="${escapeHtml(product.id)}" aria-pressed="${selected === product.id}">
+        <div class="products">${products.map(product => `<button type="button" class="product${selected === product.id ? ' selected' : ''}" data-product="${escapeHtml(product.id)}" aria-pressed="${selected === product.id}">
           <span class="mini-phone" aria-hidden="true"></span><div class="product-info"><strong>${escapeHtml(product.name)}</strong><small>${product.price === null ? 'A equipe ajuda você a escolher' : `${escapeHtml(product.storage)} • ${money(product.price)}`}</small></div>
           ${product.price === null ? '' : `<div class="product-diff"><small>${Math.max(0, product.price - record.calculation.estimated) ? 'você completa' : 'seu crédito'}</small><b>${Math.max(0, product.price - record.calculation.estimated) ? money(Math.max(0, product.price - record.calculation.estimated)) : 'cobre tudo'}</b></div>`}<span class="radio" aria-hidden="true"></span></button>`).join('')}</div>
         ${value ? `<div class="deal-card" aria-live="polite">${value.price === null ? `<p class="deal-help">Sem problema! A equipe da Gringas ajuda você a escolher.</p>` : `<div class="deal-row"><span>${escapeHtml(value.productName)} ${escapeHtml(value.storage)}</span><b>${money(value.price)}</b></div><div class="deal-row credit"><span>Seu iPhone como entrada</span><b>− ${money(Math.min(value.tradeValue, value.price))}</b></div><div class="deal-total"><span class="value-label">${value.difference > 0 ? 'VOCÊ COMPLETA' : 'SALDO ESTIMADO'}</span><div class="deal-amount">${money(value.difference > 0 ? value.difference : value.creditOver)}</div>${value.difference > 0 ? `<div class="deal-installment">ou em até <b>12x de ${installment(value.installment)}</b>*</div>` : ''}</div>`}</div>` : ''}</div>
@@ -535,7 +542,7 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
       const control = root.querySelector('#confirmUpgrade');
       control.disabled = true;
       try {
-        record = await saveUpgrade(record, selected);
+        record = await saveUpgrade(record, selected, products);
         const value = record.upgrade;
         const whatsappHref = upgradeWhatsappUrl(
           record,
@@ -554,6 +561,12 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
   }
 
   function render() {
+    // Voltar no navegador para o resultado/upgrade depois de recomeçar: não há
+    // avaliação para mostrar, então volta para a última etapa do formulário.
+    if (!record && (state.step > TOTAL_STEPS || currentView !== 'wizard')) {
+      currentView = 'wizard';
+      state.step = Math.min(state.step, TOTAL_STEPS);
+    }
     if (back) back.classList.toggle('hidden', state.step === 1);
     document.body.dataset.view = currentView;
     if (currentView === 'upgrade' && record) {
@@ -582,8 +595,14 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
   });
 
   if (back) back.addEventListener('click', () => globalThis.history.back());
+  let confirmingRestart = false;
   restart?.addEventListener('click', async () => {
-    if (state.step > 1 && currentView === 'wizard' && !(await confirmarRecomeco(document))) return;
+    if (confirmingRestart) return;
+    if (state.step > 1 && currentView === 'wizard') {
+      confirmingRestart = true;
+      const confirmed = await confirmarRecomeco(document).finally(() => { confirmingRestart = false; });
+      if (!confirmed) return;
+    }
     reset();
   });
   pushNavigation('wizard', 1, { replace: true });

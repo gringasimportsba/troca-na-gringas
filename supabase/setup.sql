@@ -361,8 +361,8 @@ using (bucket_id <> 'evaluation-photos'
 -- 5. Preços, regras e cálculo no servidor.
 -- O banco recalcula base, descontos e estimativa a partir das respostas e descarta os
 -- valores enviados pelo navegador. Valores iniciais = js/evaluation/calculator.js
--- (demonstrativos). Rodar o setup de novo NÃO sobrescreve preços já editados; para
--- alterar preços use o Table Editor (pricing_models / pricing_rules).
+-- (demonstrativos). Rodar o setup de novo NÃO sobrescreve preços já editados; os
+-- preços e regras são alterados pelo painel (Aparelhos e preços / Regras de avaliação).
 create table if not exists public.pricing_models (
   store_id uuid not null references public.stores(id) on delete cascade,
   model text not null,
@@ -542,6 +542,91 @@ revoke all on function public.calculate_evaluation_values() from public, anon, a
 drop trigger if exists calculate_evaluation_values on public.evaluations;
 create trigger calculate_evaluation_values before insert or update on public.evaluations
 for each row execute function public.calculate_evaluation_values();
+
+-- 6. Regras editadas pelo painel: valida o formato antes de gravar, porque uma regra
+-- quebrada faria calculate_evaluation_values recusar todas as avaliações.
+create or replace function public.validate_pricing_rules()
+returns trigger language plpgsql set search_path = '' as $$
+declare
+  r jsonb := new.rules; section text; item record; tier jsonb; previous_min numeric := null;
+begin
+  foreach section in array array['storageBonus','conditionDiscount','screenDiscount','issueDiscount'] loop
+    if jsonb_typeof(r->section) <> 'object' then
+      raise exception 'invalid pricing rules: %', section using errcode = '23514';
+    end if;
+    for item in select key, value from jsonb_each(r->section) loop
+      if jsonb_typeof(item.value) <> 'number' or not ((item.value #>> '{}')::numeric between 0 and 1000000) then
+        raise exception 'invalid pricing rules: %.%', section, item.key using errcode = '23514';
+      end if;
+    end loop;
+  end loop;
+  if jsonb_typeof(r->'batteryDiscount') <> 'array' or jsonb_array_length(r->'batteryDiscount') = 0 then
+    raise exception 'invalid pricing rules: batteryDiscount' using errcode = '23514';
+  end if;
+  -- Faixas em ordem decrescente de bateria mínima; a última precisa cobrir 0%.
+  for tier in select value from jsonb_array_elements(r->'batteryDiscount') loop
+    if jsonb_typeof(tier->'min') <> 'number' or jsonb_typeof(tier->'amount') <> 'number'
+       or not ((tier->>'min')::numeric between 0 and 100)
+       or not ((tier->>'amount')::numeric between 0 and 1000000)
+       or (previous_min is not null and (tier->>'min')::numeric >= previous_min) then
+      raise exception 'invalid pricing rules: batteryDiscount' using errcode = '23514';
+    end if;
+    previous_min := (tier->>'min')::numeric;
+  end loop;
+  if previous_min <> 0
+     or jsonb_typeof(r->'repairDiscount') <> 'number'
+     or not ((r->>'repairDiscount')::numeric between 0 and 1000000)
+     or jsonb_typeof(r->'maximumDiscountRate') <> 'number'
+     or not ((r->>'maximumDiscountRate')::numeric between 0 and 1)
+     or jsonb_typeof(r->'manualReasons') <> 'object' then
+    raise exception 'invalid pricing rules' using errcode = '23514';
+  end if;
+  new.updated_at := now();
+  return new;
+end;
+$$;
+revoke all on function public.validate_pricing_rules() from public, anon, authenticated;
+drop trigger if exists validate_pricing_rules on public.pricing_rules;
+create trigger validate_pricing_rules before insert or update on public.pricing_rules
+for each row execute function public.validate_pricing_rules();
+
+-- 7. Produtos para upgrade. São preços públicos de venda: o formulário (sessão anônima)
+-- lê os ativos; membros leem todos; só owner/admin alteram. "Ainda não decidi" é fixo
+-- no formulário e não fica na tabela.
+create table if not exists public.upgrade_products (
+  store_id uuid not null references public.stores(id) on delete cascade,
+  id text not null check (id ~ '^[a-z0-9-]{1,40}$' and id <> 'undecided'),
+  name text not null check (length(btrim(name)) between 1 and 80),
+  storage text not null default '' check (length(storage) <= 40),
+  price numeric(12,2) not null check (price between 0 and 1000000),
+  active boolean not null default true,
+  sort_order integer not null default 0,
+  primary key (store_id, id)
+);
+alter table public.upgrade_products enable row level security;
+alter table public.upgrade_products force row level security;
+revoke all on public.upgrade_products from public, anon, authenticated;
+grant select on public.upgrade_products to anon, authenticated;
+grant insert, update, delete on public.upgrade_products to authenticated;
+drop policy if exists upgrade_products_public_read on public.upgrade_products;
+drop policy if exists upgrade_products_members_read on public.upgrade_products;
+drop policy if exists upgrade_products_admins_write on public.upgrade_products;
+create policy upgrade_products_public_read on public.upgrade_products for select to anon, authenticated
+using (active);
+create policy upgrade_products_members_read on public.upgrade_products for select to authenticated
+using (exists (select 1 from public.store_members m
+  where m.store_id = upgrade_products.store_id and m.user_id = (select auth.uid())));
+create policy upgrade_products_admins_write on public.upgrade_products for all to authenticated
+using (exists (select 1 from public.store_members m
+  where m.store_id = upgrade_products.store_id and m.user_id = (select auth.uid())
+    and m.role in ('owner','admin')))
+with check (exists (select 1 from public.store_members m
+  where m.store_id = upgrade_products.store_id and m.user_id = (select auth.uid())
+    and m.role in ('owner','admin')));
+insert into public.upgrade_products (store_id, id, name, storage, price, sort_order) values
+  ('11111111-1111-1111-1111-111111111111', '18pro', 'iPhone 18 Pro', '256GB', 8499, 1),
+  ('11111111-1111-1111-1111-111111111111', '18promax', 'iPhone 18 Pro Max', '256GB', 9499, 2)
+on conflict (store_id, id) do nothing;
 
 -- Supabase padrão já habilita RLS em Storage; abortar se a premissa não valer.
 -- As funções security definer acima (limite de envios, upload de fotos e cálculo) leem tabelas
