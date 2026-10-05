@@ -29,7 +29,7 @@ Edite `js/config.js`: `mode: 'cloud'`, `supabaseUrl`, `supabaseAnonKey` (chave *
 
 1. Crie um projeto Supabase. Em **Authentication → Providers → Anonymous Sign-Ins**, habilite logins anônimos. Revise também os limites de requisição do Auth; eles são parte da proteção básica do envio público.
 2. No **SQL Editor**, execute inteiro `supabase/setup.sql` como operador privilegiado.
-3. O script cria/reutiliza `stores`, `store_members`, `evaluations`, `pricing_models`, `pricing_rules` e o bucket privado, cria o trigger que calcula a estimativa no banco, adiciona `submitted_by`, remove `claim_initial_gringas_admin` e substitui as permissões/policies dessas tabelas. É transacional e reaplicável sobre o schema original; não apaga avaliações ou membros. Em instalações existentes, faça backup, revise membros e objetos customizados antes: um owner criado pelo bootstrap antigo pode não ser legítimo. `CREATE TABLE IF NOT EXISTS` não reconcilia schemas customizados.
+3. O script cria/reutiliza `stores`, `store_members`, `evaluations`, `pricing_models`, `pricing_rules`, `upgrade_products` e o bucket privado, cria o trigger que calcula a estimativa no banco, adiciona `submitted_by`, remove `claim_initial_gringas_admin` e substitui as permissões/policies dessas tabelas. É transacional e reaplicável sobre o schema original; não apaga avaliações ou membros. Em instalações existentes, faça backup, revise membros e objetos customizados antes: um owner criado pelo bootstrap antigo pode não ser legítimo. `CREATE TABLE IF NOT EXISTS` não reconcilia schemas customizados.
 4. Crie/convide o primeiro administrador em **Authentication → Users**, confirme email e identidade por um canal confiável. No SQL Editor, encontre o UUID:
 
 ```sql
@@ -67,9 +67,15 @@ returning store_id, user_id, role;
 
 ## Preços e regras
 
-No modo cloud o cálculo oficial roda no banco. Para mudar preços, edite `pricing_models` (preço-base e capacidades por modelo) ou `pricing_rules` (JSON com bônus de capacidade, descontos, faixas de bateria e teto) no **Table Editor**, logado como owner/admin. Rodar o `setup.sql` de novo não sobrescreve valores editados.
+No modo cloud o cálculo oficial roda no banco. Preços e regras são editados no painel, por owner/admin:
 
-`js/evaluation/calculator.js` ainda monta as opções do formulário e calcula no modo local. Ao **adicionar um modelo ou mudar uma regra**, altere nos dois lugares; um modelo que existe só no JS tem o envio recusado pelo banco.
+- **Aparelhos e preços:** valor-base de cada modelo (`pricing_models`) e acréscimo por capacidade (`pricing_rules.storageBonus`).
+- **Regras de avaliação:** descontos de bateria, estado físico, tela, funções, manutenção e o limite de desconto automático (`pricing_rules`). O trigger `validate_pricing_rules` recusa regras malformadas, que travariam o cálculo.
+- **Produtos para upgrade:** catálogo da tela "Escolha seu próximo iPhone" (`upgrade_products`). O formulário lê os produtos ativos; se a leitura falhar, usa a lista padrão de `calculator.js`.
+
+Seller e viewer só consultam. Rodar o `setup.sql` de novo não sobrescreve valores editados.
+
+`js/evaluation/calculator.js` ainda monta as opções do formulário (modelos, capacidades e respostas) e calcula no modo local. O painel altera só valores; para **adicionar um modelo, capacidade ou opção de resposta**, altere no JS e no banco, senão o envio é recusado.
 
 ## Ordem de implantação (Supabase antes do código)
 
@@ -84,8 +90,6 @@ Esta versão do código exige o login anônimo e o `setup.sql` atual. Faça nest
 7. **Admin:** criar o primeiro owner, se não houver (seção "Instalar o banco", passos 4 e 5).
 
 Se o envio falhar, o formulário oferece ao cliente um botão para mandar a avaliação pelo WhatsApp.
-
-Ainda pendente: tela no admin para editar preços, regras e produtos de upgrade (hoje pelo Table Editor e, para upgrades, em `calculator.js`).
 
 ## Limitações e operação
 

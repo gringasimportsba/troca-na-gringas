@@ -35,11 +35,14 @@ const storageByModel = Object.freeze(Object.fromEntries(
 const baseByModel = Object.freeze(Object.fromEntries(
   deviceEntries.map(([model, price]) => [model, price]),
 ));
-const upgradeProducts = Object.freeze([
+// Produtos de upgrade padrão (modo local e fallback). No modo cloud a lista vem da
+// tabela upgrade_products, editada no painel. "Ainda não decidi" é sempre a última opção.
+export const defaultUpgradeProducts = Object.freeze([
   Object.freeze({ id: '18pro', name: 'iPhone 18 Pro', storage: '256GB', price: 8499 }),
   Object.freeze({ id: '18promax', name: 'iPhone 18 Pro Max', storage: '256GB', price: 9499 }),
-  Object.freeze({ id: 'undecided', name: 'Ainda não decidi', storage: '', price: null }),
 ]);
+export const undecidedProduct = Object.freeze({ id: 'undecided', name: 'Ainda não decidi', storage: '', price: null });
+const upgradeProducts = Object.freeze([...defaultUpgradeProducts, undecidedProduct]);
 
 export const catalog = Object.freeze({
   models,
@@ -140,8 +143,8 @@ export function calculate(state, prices = catalog.baseByModel) {
   return { base, totalDiscount, cap, estimated, manual, lines, isManual: manual.length > 0 };
 }
 
-export function calculateUpgrade(productId, tradeValue) {
-  const product = catalog.upgradeProducts.find(item => item.id === productId);
+export function calculateUpgrade(productId, tradeValue, products = catalog.upgradeProducts) {
+  const product = products.find(item => item.id === productId);
   if (!product) throw new Error('Escolha um upgrade válido.');
   if (!Number.isFinite(tradeValue) || tradeValue < 0) throw new Error('Crédito de troca inválido.');
 

@@ -1,5 +1,5 @@
 import { config } from '../config.js';
-import { calculate, calculateUpgrade, rules } from './calculator.js';
+import { calculate, calculateUpgrade, rules, catalog, undecidedProduct } from './calculator.js';
 
 const HISTORY_KEY = 'gringasTrocaEvaluationsV55';
 const MAX_LOCAL_RECORDS = 150;
@@ -366,9 +366,30 @@ export async function saveEvaluation(state, calculation = calculate(state), prev
   return saveLocal(createRecord(state, calculation, previous));
 }
 
-export async function saveUpgrade(record, productId) {
+// Produtos ativos cadastrados no painel. Se a nuvem não responder, usa a lista padrão
+// para o cliente não ficar sem opções (o preço final é confirmado no atendimento).
+export async function loadUpgradeProducts() {
+  const client = getCloudClient();
+  if (!client) return catalog.upgradeProducts;
+  try {
+    const { data, error } = await client.from('upgrade_products')
+      .select('id,name,storage,price')
+      .eq('store_id', config.storeId)
+      .eq('active', true)
+      .order('sort_order');
+    if (error) throw error;
+    const products = (data || [])
+      .map(row => ({ id: String(row.id), name: String(row.name), storage: String(row.storage || ''), price: Number(row.price) }))
+      .filter(product => product.id && product.name && Number.isFinite(product.price));
+    return products.length ? [...products, undecidedProduct] : catalog.upgradeProducts;
+  } catch {
+    return catalog.upgradeProducts;
+  }
+}
+
+export async function saveUpgrade(record, productId, products = catalog.upgradeProducts) {
   const upgrade = {
-    ...calculateUpgrade(productId, record.calculation.estimated),
+    ...calculateUpgrade(productId, record.calculation.estimated, products),
     selectedAt: new Date().toISOString(),
   };
   const updated = { ...record, upgrade, updatedAt: new Date().toISOString() };
