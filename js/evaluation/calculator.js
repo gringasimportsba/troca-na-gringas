@@ -97,9 +97,9 @@ function batteryPenalty(value) {
   return { amount, label: `Bateria ${value}%`, manual: false };
 }
 
-export function calculate(state, prices = catalog.baseByModel) {
+export function calculate(state, prices = catalog.baseByModel, bonuses = {}) {
   const basePrice = Number(prices[state.model]);
-  const storageBonus = rules.storageBonus[state.storage];
+  const storageBonus = bonuses?.[state.model]?.[state.storage] ?? rules.storageBonus[state.storage];
   if (!Number.isFinite(basePrice) || storageBonus === undefined) {
     throw new Error('Modelo ou capacidade inválidos para o cálculo.');
   }

@@ -408,3 +408,23 @@ export async function saveUpgrade(record, productId, products = catalog.upgradeP
   writeLocalEvaluations(records.map(item => item.id === record.id ? persisted : item));
   return { ...updated, cloud: false };
 }
+
+export async function loadStorageBonuses() {
+  if (!hasCloudConfiguration()) return {};
+  try {
+    const client = getCloudClient();
+    await ensureSubmissionSession(client);
+    const { data, error } = await client
+      .from('device_storage_prices')
+      .select('model,storage,bonus')
+      .eq('store_id', config.storeId);
+    if (error || !Array.isArray(data)) return {};
+    const bonuses = {};
+    for (const row of data) {
+      (bonuses[row.model] ??= {})[row.storage] = Number(row.bonus);
+    }
+    return bonuses;
+  } catch {
+    return {};
+  }
+}
