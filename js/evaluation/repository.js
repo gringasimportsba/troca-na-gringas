@@ -1,11 +1,14 @@
 import { config } from '../config.js';
-import { calculate, calculateUpgrade } from './calculator.js';
+import { calculate, calculateUpgrade, rules, catalog, undecidedProduct } from './calculator.js';
 
 const HISTORY_KEY = 'gringasTrocaEvaluationsV55';
 const MAX_LOCAL_RECORDS = 150;
 const MAX_PHOTO_BYTES = 6 * 1024 * 1024;
 const PHOTO_TYPES = Object.freeze(['image/jpeg', 'image/png', 'image/webp']);
 const PHOTO_KEYS = Object.freeze(['front', 'back', 'left', 'right', 'detail']);
+
+// Envio: sessão anônima do Supabase Auth + `supabase/setup.sql` aplicado. O banco recalcula
+// a estimativa (trigger calculate_evaluation_values) e o valor exibido é o devolvido por ele.
 
 let cloudClient;
 
@@ -169,11 +172,15 @@ function photoExtension(type) {
 }
 
 async function dataUrlToPhoto(value) {
-  if (typeof value !== 'string' || !/^data:image\/(?:jpeg|png|webp);base64,/i.test(value)) {
+  const match = typeof value === 'string' && /^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/i.exec(value);
+  if (!match) {
     throw new Error('Foto inválida. Envie novamente em JPEG, PNG ou WebP.');
   }
-  const response = await fetch(value);
-  const blob = await response.blob();
+  // Decodifica sem fetch(): a CSP (connect-src em vercel.json) bloqueia requisições a data: URLs.
+  const binary = atob(match[2]);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  const blob = new Blob([bytes], { type: match[1].toLowerCase() });
   if (!PHOTO_TYPES.includes(blob.type) || blob.size <= 0 || blob.size > MAX_PHOTO_BYTES) {
     throw new Error('Cada foto deve ser JPEG, PNG ou WebP e ter no máximo 6 MB.');
   }
@@ -241,18 +248,33 @@ function cloudError(message, cause) {
   return new Error(`${message}${detail}`, { cause });
 }
 
+// Cálculo oficial, devolvido pelo banco. `cap` não é gravado, então é derivado da base.
+function calculationFromRow(row) {
+  const base = Number(row.base_value);
+  return {
+    base,
+    totalDiscount: Number(row.total_discount),
+    cap: Math.round(base * rules.maximumDiscountRate),
+    estimated: Number(row.estimated_value),
+    isManual: Boolean(row.manual_review),
+    manual: Array.isArray(row.manual_reasons) ? row.manual_reasons : [],
+    lines: Array.isArray(row.calculation_lines) ? row.calculation_lines : [],
+  };
+}
+
 async function updateCloudRecord(client, record, paths) {
   const { data, error } = await client
     .from('evaluations')
     .update(updateRowFromRecord(record, paths))
     .eq('store_id', config.storeId)
     .eq('code', record.id)
-    .select('code')
+    .select('code,base_value,total_discount,estimated_value,manual_review,manual_reasons,calculation_lines')
     .maybeSingle();
   if (error) throw error;
   if (!data?.code) {
     throw new Error('Esta avaliação não está mais disponível para edição. Atualize o atendimento com a equipe.');
   }
+  return calculationFromRow(data);
 }
 
 async function createCloud(record, client) {
@@ -260,9 +282,10 @@ async function createCloud(record, client) {
   if (insertError) throw cloudError('Não foi possível iniciar a avaliação na nuvem.', insertError);
 
   let prepared = { paths: {}, uploaded: [], obsolete: [] };
+  let calculation;
   try {
     prepared = await preparePhotos(client, record);
-    await updateCloudRecord(client, record, prepared.paths);
+    calculation = await updateCloudRecord(client, record, prepared.paths);
   } catch (cause) {
     await removePhotos(client, prepared.uploaded);
     await client.from('evaluations').delete()
@@ -273,6 +296,7 @@ async function createCloud(record, client) {
 
   return {
     ...record,
+    calculation,
     photos: prepared.paths,
     photoPreviews: { ...record.photos },
     cloud: true,
@@ -281,8 +305,9 @@ async function createCloud(record, client) {
 
 async function updateCloud(record, previous, client) {
   const prepared = await preparePhotos(client, record, previous);
+  let calculation;
   try {
-    await updateCloudRecord(client, record, prepared.paths);
+    calculation = await updateCloudRecord(client, record, prepared.paths);
   } catch (cause) {
     await removePhotos(client, prepared.uploaded);
     throw cloudError('Não foi possível atualizar a avaliação na nuvem.', cause);
@@ -291,6 +316,7 @@ async function updateCloud(record, previous, client) {
   const cleanupError = await removePhotos(client, prepared.obsolete);
   return {
     ...record,
+    calculation,
     photos: prepared.paths,
     photoPreviews: { ...record.photos },
     photoCleanupWarning: Boolean(cleanupError),
@@ -340,9 +366,30 @@ export async function saveEvaluation(state, calculation = calculate(state), prev
   return saveLocal(createRecord(state, calculation, previous));
 }
 
-export async function saveUpgrade(record, productId) {
+// Produtos ativos cadastrados no painel. Se a nuvem não responder, usa a lista padrão
+// para o cliente não ficar sem opções (o preço final é confirmado no atendimento).
+export async function loadUpgradeProducts() {
+  const client = getCloudClient();
+  if (!client) return catalog.upgradeProducts;
+  try {
+    const { data, error } = await client.from('upgrade_products')
+      .select('id,name,storage,price')
+      .eq('store_id', config.storeId)
+      .eq('active', true)
+      .order('sort_order');
+    if (error) throw error;
+    const products = (data || [])
+      .map(row => ({ id: String(row.id), name: String(row.name), storage: String(row.storage || ''), price: Number(row.price) }))
+      .filter(product => product.id && product.name && Number.isFinite(product.price));
+    return products.length ? [...products, undecidedProduct] : catalog.upgradeProducts;
+  } catch {
+    return catalog.upgradeProducts;
+  }
+}
+
+export async function saveUpgrade(record, productId, products = catalog.upgradeProducts) {
   const upgrade = {
-    ...calculateUpgrade(productId, record.calculation.estimated),
+    ...calculateUpgrade(productId, record.calculation.estimated, products),
     selectedAt: new Date().toISOString(),
   };
   const updated = { ...record, upgrade, updatedAt: new Date().toISOString() };

@@ -358,7 +358,280 @@ create policy evaluation_photos_delete_guard on storage.objects as restrictive f
 using (bucket_id <> 'evaluation-photos'
   or owner_id::text = (select auth.uid())::text);
 
+-- 5. Preços, regras e cálculo no servidor.
+-- O banco recalcula base, descontos e estimativa a partir das respostas e descarta os
+-- valores enviados pelo navegador. Valores iniciais = js/evaluation/calculator.js
+-- (demonstrativos). Rodar o setup de novo NÃO sobrescreve preços já editados; os
+-- preços e regras são alterados pelo painel (Aparelhos e preços / Regras de avaliação).
+create table if not exists public.pricing_models (
+  store_id uuid not null references public.stores(id) on delete cascade,
+  model text not null,
+  base_price numeric(12,2) not null check (base_price between 0 and 1000000),
+  storages text[] not null,
+  sort_order integer not null default 0,
+  primary key (store_id, model)
+);
+create table if not exists public.pricing_rules (
+  store_id uuid primary key references public.stores(id) on delete cascade,
+  rules jsonb not null check (jsonb_typeof(rules) = 'object'),
+  updated_at timestamptz not null default now()
+);
+alter table public.pricing_models enable row level security;
+alter table public.pricing_rules enable row level security;
+alter table public.pricing_models force row level security;
+alter table public.pricing_rules force row level security;
+revoke all on public.pricing_models, public.pricing_rules from public, anon, authenticated;
+grant select, insert, update, delete on public.pricing_models, public.pricing_rules to authenticated;
+drop policy if exists pricing_models_members_read on public.pricing_models;
+drop policy if exists pricing_models_admins_write on public.pricing_models;
+drop policy if exists pricing_rules_members_read on public.pricing_rules;
+drop policy if exists pricing_rules_admins_write on public.pricing_rules;
+-- Membros da loja leem; só owner/admin alteram. Visitantes não leem a tabela de preços.
+create policy pricing_models_members_read on public.pricing_models for select to authenticated
+using (exists (select 1 from public.store_members m
+  where m.store_id = pricing_models.store_id and m.user_id = (select auth.uid())));
+create policy pricing_models_admins_write on public.pricing_models for all to authenticated
+using (exists (select 1 from public.store_members m
+  where m.store_id = pricing_models.store_id and m.user_id = (select auth.uid())
+    and m.role in ('owner','admin')))
+with check (exists (select 1 from public.store_members m
+  where m.store_id = pricing_models.store_id and m.user_id = (select auth.uid())
+    and m.role in ('owner','admin')));
+create policy pricing_rules_members_read on public.pricing_rules for select to authenticated
+using (exists (select 1 from public.store_members m
+  where m.store_id = pricing_rules.store_id and m.user_id = (select auth.uid())));
+create policy pricing_rules_admins_write on public.pricing_rules for all to authenticated
+using (exists (select 1 from public.store_members m
+  where m.store_id = pricing_rules.store_id and m.user_id = (select auth.uid())
+    and m.role in ('owner','admin')))
+with check (exists (select 1 from public.store_members m
+  where m.store_id = pricing_rules.store_id and m.user_id = (select auth.uid())
+    and m.role in ('owner','admin')));
+
+insert into public.pricing_models (store_id, model, base_price, storages, sort_order) values
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 11', 900, array['64 GB','128 GB','256 GB'], 1),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 11 Pro', 1150, array['64 GB','256 GB','512 GB'], 2),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 11 Pro Max', 1350, array['64 GB','256 GB','512 GB'], 3),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 12', 1250, array['64 GB','128 GB','256 GB'], 4),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 12 Pro', 1550, array['128 GB','256 GB','512 GB'], 5),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 12 Pro Max', 1800, array['128 GB','256 GB','512 GB'], 6),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 13', 1750, array['128 GB','256 GB','512 GB'], 7),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 13 Pro', 2200, array['128 GB','256 GB','512 GB','1 TB'], 8),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 13 Pro Max', 2500, array['128 GB','256 GB','512 GB','1 TB'], 9),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 14', 2250, array['128 GB','256 GB','512 GB'], 10),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 14 Pro', 2850, array['128 GB','256 GB','512 GB','1 TB'], 11),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 14 Pro Max', 3250, array['128 GB','256 GB','512 GB','1 TB'], 12),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 15', 2800, array['128 GB','256 GB','512 GB'], 13),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 15 Pro', 3650, array['128 GB','256 GB','512 GB','1 TB'], 14),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 15 Pro Max', 4250, array['256 GB','512 GB','1 TB'], 15),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 16', 3500, array['128 GB','256 GB','512 GB'], 16),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 16 Pro', 4550, array['128 GB','256 GB','512 GB','1 TB'], 17),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 16 Pro Max', 5350, array['256 GB','512 GB','1 TB'], 18),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 17', 4300, array['256 GB','512 GB'], 19),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 17 Pro', 5700, array['256 GB','512 GB','1 TB'], 20),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 17 Pro Max', 6500, array['256 GB','512 GB','1 TB','2 TB'], 21),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 18 Pro', 6900, array['256 GB','512 GB','1 TB'], 22),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 18 Pro Max', 7800, array['256 GB','512 GB','1 TB','2 TB'], 23)
+on conflict (store_id, model) do nothing;
+insert into public.pricing_rules (store_id, rules) values ('11111111-1111-1111-1111-111111111111', '{"storageBonus":{"64 GB":0,"128 GB":100,"256 GB":250,"512 GB":500,"1 TB":800,"2 TB":1200},"conditionDiscount":{"Excelente":0,"Bom":100,"Regular":300,"Danificado":0},"screenDiscount":{"Sim, perfeitamente":0,"Possui riscos/manchas":180,"Está trincada":0,"Possui problema no touch":0,"Tela já foi substituída":220},"issueDiscount":{"Face ID / Touch ID":0,"Câmeras":350,"Alto-falantes":160,"Microfones":160,"Botões":120,"Wi‑Fi / Bluetooth":300,"Carregamento":250},"manualReasons":{"condition":["Danificado"],"screen":["Está trincada","Possui problema no touch"],"issues":["Face ID / Touch ID"]},"batteryDiscount":[{"min":90,"amount":0},{"min":85,"amount":100},{"min":80,"amount":220},{"min":0,"amount":400}],"repairDiscount":100,"maximumDiscountRate":0.3}'::jsonb)
+on conflict (store_id) do nothing;
+
+-- Mesma lógica de calculate() em js/evaluation/calculator.js. Roda antes dos demais
+-- triggers (ordem alfabética), então validate_evaluation_write confere o resultado.
+create or replace function public.calculate_evaluation_values()
+returns trigger language plpgsql security definer set search_path = '' as $$
+declare
+  r jsonb; model_row record; base numeric; cap numeric; amount numeric; tier jsonb; issue text;
+  labels text[] := '{}'; amounts numeric[] := '{}'; reasons text[] := '{}';
+  lines jsonb; total numeric; manual jsonb;
+begin
+  -- Sem mudança nas respostas, os valores gravados são mantidos (ex.: o painel mudando
+  -- o status), o que também impede o navegador de editar a estimativa diretamente.
+  if tg_op = 'UPDATE' and
+     (new.store_id, new.device_model, new.device_storage, new.battery, new.condition,
+      new.screen_condition, new.issues, new.repair_history, new.part_alert)
+     is not distinct from
+     (old.store_id, old.device_model, old.device_storage, old.battery, old.condition,
+      old.screen_condition, old.issues, old.repair_history, old.part_alert) then
+    new.base_value := old.base_value;
+    new.total_discount := old.total_discount;
+    new.estimated_value := old.estimated_value;
+    new.manual_review := old.manual_review;
+    new.manual_reasons := old.manual_reasons;
+    new.calculation_lines := old.calculation_lines;
+    return new;
+  end if;
+
+  select p.rules into r from public.pricing_rules p where p.store_id = new.store_id;
+  select * into model_row from public.pricing_models p
+    where p.store_id = new.store_id and p.model = new.device_model;
+  if r is null or not found or not (new.device_storage = any(model_row.storages))
+     or not (r->'storageBonus' ? new.device_storage) then
+    raise exception 'invalid model or storage for pricing' using errcode = '23514';
+  end if;
+  base := model_row.base_price + (r->'storageBonus'->>new.device_storage)::numeric;
+
+  if new.battery is null then
+    reasons := reasons || 'Saúde da bateria não informada'::text;
+  else
+    if new.battery not between 50 and 100 then
+      raise exception 'invalid battery' using errcode = '23514';
+    end if;
+    amount := null;
+    for tier in select value from jsonb_array_elements(r->'batteryDiscount') loop
+      if new.battery >= (tier->>'min')::numeric then amount := (tier->>'amount')::numeric; exit; end if;
+    end loop;
+    labels := labels || ('Bateria ' || new.battery || '%'); amounts := amounts || coalesce(amount, 0);
+  end if;
+
+  if not (r->'conditionDiscount' ? new.condition) or not (r->'screenDiscount' ? new.screen_condition) then
+    raise exception 'invalid condition or screen' using errcode = '23514';
+  end if;
+  labels := labels || ('Estado físico: ' || new.condition);
+  amounts := amounts || (r->'conditionDiscount'->>new.condition)::numeric;
+  if r->'manualReasons'->'condition' ? new.condition then
+    reasons := reasons || 'Estado físico danificado'::text;
+  end if;
+  labels := labels || ('Tela: ' || new.screen_condition);
+  amounts := amounts || (r->'screenDiscount'->>new.screen_condition)::numeric;
+  if r->'manualReasons'->'screen' ? new.screen_condition then
+    reasons := reasons || ('Tela: ' || new.screen_condition);
+  end if;
+
+  if jsonb_typeof(new.issues) <> 'array'
+     or (select count(*) <> count(distinct value) from jsonb_array_elements_text(new.issues)) then
+    raise exception 'invalid issues' using errcode = '23514';
+  end if;
+  for issue in select value from jsonb_array_elements_text(new.issues) loop
+    if not (r->'issueDiscount' ? issue) then
+      raise exception 'invalid issue' using errcode = '23514';
+    end if;
+    labels := labels || ('Função: ' || issue);
+    amounts := amounts || (r->'issueDiscount'->>issue)::numeric;
+    if r->'manualReasons'->'issues' ? issue then reasons := reasons || (issue || ' com problema'); end if;
+  end loop;
+
+  if new.repair_history = 'Sim' then
+    labels := labels || 'Histórico de manutenção'::text;
+    amounts := amounts || (r->>'repairDiscount')::numeric;
+  end if;
+  if new.part_alert = 'Sim' then reasons := reasons || 'Aviso de peça no sistema'::text; end if;
+  if new.part_alert = 'Não sei' then reasons := reasons || 'Alerta de peça precisa ser verificado'::text; end if;
+
+  select coalesce(jsonb_agg(jsonb_build_object('label', l, 'amount', a) order by i), '[]'::jsonb),
+         coalesce(sum(a), 0)
+    into lines, total
+    from unnest(labels, amounts) with ordinality as t(l, a, i) where a > 0;
+  cap := round(base * (r->>'maximumDiscountRate')::numeric);
+  if total > cap then
+    reasons := reasons || ('Descontos ultrapassam ' || round((r->>'maximumDiscountRate')::numeric * 100) || '% do valor-base');
+  end if;
+  select coalesce(jsonb_agg(x order by first_i), '[]'::jsonb) into manual
+    from (select x, min(i) as first_i from unnest(reasons) with ordinality as t(x, i) group by x) s;
+
+  new.base_value := base;
+  new.total_discount := total;
+  new.estimated_value := greatest(0, base - least(total, cap));
+  new.manual_review := jsonb_array_length(manual) > 0;
+  new.manual_reasons := manual;
+  new.calculation_lines := lines;
+  return new;
+end;
+$$;
+revoke all on function public.calculate_evaluation_values() from public, anon, authenticated;
+drop trigger if exists calculate_evaluation_values on public.evaluations;
+create trigger calculate_evaluation_values before insert or update on public.evaluations
+for each row execute function public.calculate_evaluation_values();
+
+-- 6. Regras editadas pelo painel: valida o formato antes de gravar, porque uma regra
+-- quebrada faria calculate_evaluation_values recusar todas as avaliações.
+create or replace function public.validate_pricing_rules()
+returns trigger language plpgsql set search_path = '' as $$
+declare
+  r jsonb := new.rules; section text; item record; tier jsonb; previous_min numeric := null;
+begin
+  foreach section in array array['storageBonus','conditionDiscount','screenDiscount','issueDiscount'] loop
+    if jsonb_typeof(r->section) <> 'object' then
+      raise exception 'invalid pricing rules: %', section using errcode = '23514';
+    end if;
+    for item in select key, value from jsonb_each(r->section) loop
+      if jsonb_typeof(item.value) <> 'number' or not ((item.value #>> '{}')::numeric between 0 and 1000000) then
+        raise exception 'invalid pricing rules: %.%', section, item.key using errcode = '23514';
+      end if;
+    end loop;
+  end loop;
+  if jsonb_typeof(r->'batteryDiscount') <> 'array' or jsonb_array_length(r->'batteryDiscount') = 0 then
+    raise exception 'invalid pricing rules: batteryDiscount' using errcode = '23514';
+  end if;
+  -- Faixas em ordem decrescente de bateria mínima; a última precisa cobrir 0%.
+  for tier in select value from jsonb_array_elements(r->'batteryDiscount') loop
+    if jsonb_typeof(tier->'min') <> 'number' or jsonb_typeof(tier->'amount') <> 'number'
+       or not ((tier->>'min')::numeric between 0 and 100)
+       or not ((tier->>'amount')::numeric between 0 and 1000000)
+       or (previous_min is not null and (tier->>'min')::numeric >= previous_min) then
+      raise exception 'invalid pricing rules: batteryDiscount' using errcode = '23514';
+    end if;
+    previous_min := (tier->>'min')::numeric;
+  end loop;
+  if previous_min <> 0
+     or jsonb_typeof(r->'repairDiscount') <> 'number'
+     or not ((r->>'repairDiscount')::numeric between 0 and 1000000)
+     or jsonb_typeof(r->'maximumDiscountRate') <> 'number'
+     or not ((r->>'maximumDiscountRate')::numeric between 0 and 1)
+     or jsonb_typeof(r->'manualReasons') <> 'object' then
+    raise exception 'invalid pricing rules' using errcode = '23514';
+  end if;
+  new.updated_at := now();
+  return new;
+end;
+$$;
+revoke all on function public.validate_pricing_rules() from public, anon, authenticated;
+drop trigger if exists validate_pricing_rules on public.pricing_rules;
+create trigger validate_pricing_rules before insert or update on public.pricing_rules
+for each row execute function public.validate_pricing_rules();
+
+-- 7. Produtos para upgrade. São preços públicos de venda: o formulário (sessão anônima)
+-- lê os ativos; membros leem todos; só owner/admin alteram. "Ainda não decidi" é fixo
+-- no formulário e não fica na tabela.
+create table if not exists public.upgrade_products (
+  store_id uuid not null references public.stores(id) on delete cascade,
+  id text not null check (id ~ '^[a-z0-9-]{1,40}$' and id <> 'undecided'),
+  name text not null check (length(btrim(name)) between 1 and 80),
+  storage text not null default '' check (length(storage) <= 40),
+  price numeric(12,2) not null check (price between 0 and 1000000),
+  active boolean not null default true,
+  sort_order integer not null default 0,
+  primary key (store_id, id)
+);
+alter table public.upgrade_products enable row level security;
+alter table public.upgrade_products force row level security;
+revoke all on public.upgrade_products from public, anon, authenticated;
+grant select on public.upgrade_products to anon, authenticated;
+grant insert, update, delete on public.upgrade_products to authenticated;
+drop policy if exists upgrade_products_public_read on public.upgrade_products;
+drop policy if exists upgrade_products_members_read on public.upgrade_products;
+drop policy if exists upgrade_products_admins_write on public.upgrade_products;
+create policy upgrade_products_public_read on public.upgrade_products for select to anon, authenticated
+using (active);
+create policy upgrade_products_members_read on public.upgrade_products for select to authenticated
+using (exists (select 1 from public.store_members m
+  where m.store_id = upgrade_products.store_id and m.user_id = (select auth.uid())));
+create policy upgrade_products_admins_write on public.upgrade_products for all to authenticated
+using (exists (select 1 from public.store_members m
+  where m.store_id = upgrade_products.store_id and m.user_id = (select auth.uid())
+    and m.role in ('owner','admin')))
+with check (exists (select 1 from public.store_members m
+  where m.store_id = upgrade_products.store_id and m.user_id = (select auth.uid())
+    and m.role in ('owner','admin')));
+insert into public.upgrade_products (store_id, id, name, storage, price, sort_order) values
+  ('11111111-1111-1111-1111-111111111111', '18pro', 'iPhone 18 Pro', '256GB', 8499, 1),
+  ('11111111-1111-1111-1111-111111111111', '18promax', 'iPhone 18 Pro Max', '256GB', 9499, 2)
+on conflict (store_id, id) do nothing;
+
 -- Supabase padrão já habilita RLS em Storage; abortar se a premissa não valer.
+-- As funções security definer acima (limite de envios, upload de fotos e cálculo) leem tabelas
+-- com RLS forçada: o dono delas (quem roda o script) precisa de BYPASSRLS, senão o
+-- upload de fotos falharia sem explicação. No SQL Editor do Supabase esse papel é `postgres`.
 do $$
 begin
   if not exists (select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
@@ -366,6 +639,9 @@ begin
     or exists (select 1 from pg_roles where rolname in ('anon','authenticated')
       and (rolsuper or rolbypassrls)) then
     raise exception 'Inspect Storage RLS and Supabase roles before applying';
+  end if;
+  if not exists (select 1 from pg_roles where rolname = current_user and (rolsuper or rolbypassrls)) then
+    raise exception 'Execute este script no SQL Editor como postgres (o papel atual não tem BYPASSRLS)';
   end if;
 end;
 $$;

@@ -29,7 +29,7 @@ Edite `js/config.js`: `mode: 'cloud'`, `supabaseUrl`, `supabaseAnonKey` (chave *
 
 1. Crie um projeto Supabase. Em **Authentication → Providers → Anonymous Sign-Ins**, habilite logins anônimos. Revise também os limites de requisição do Auth; eles são parte da proteção básica do envio público.
 2. No **SQL Editor**, execute inteiro `supabase/setup.sql` como operador privilegiado.
-3. O script cria/reutiliza `stores`, `store_members`, `evaluations` e o bucket privado, adiciona `submitted_by`, remove `claim_initial_gringas_admin` e substitui as permissões/policies dessas tabelas. É transacional e reaplicável sobre o schema original; não apaga avaliações ou membros. Em instalações existentes, faça backup, revise membros e objetos customizados antes: um owner criado pelo bootstrap antigo pode não ser legítimo. `CREATE TABLE IF NOT EXISTS` não reconcilia schemas customizados.
+3. O script cria/reutiliza `stores`, `store_members`, `evaluations`, `pricing_models`, `pricing_rules`, `upgrade_products` e o bucket privado, cria o trigger que calcula a estimativa no banco, adiciona `submitted_by`, remove `claim_initial_gringas_admin` e substitui as permissões/policies dessas tabelas. É transacional e reaplicável sobre o schema original; não apaga avaliações ou membros. Em instalações existentes, faça backup, revise membros e objetos customizados antes: um owner criado pelo bootstrap antigo pode não ser legítimo. `CREATE TABLE IF NOT EXISTS` não reconcilia schemas customizados.
 4. Crie/convide o primeiro administrador em **Authentication → Users**, confirme email e identidade por um canal confiável. No SQL Editor, encontre o UUID:
 
 ```sql
@@ -61,9 +61,35 @@ returning store_id, user_id, role;
 - **Sessão de envio:** antes do primeiro envio, o repository reutiliza a sessão existente ou chama `auth.signInAnonymously()`. A identidade do JWT vira `submitted_by`; esse valor não é aceito no payload enviado pelo navegador. O remetente pode ler e editar somente sua própria avaliação enquanto o status for `Nova`. Isso não concede acesso a `store_members` nem ao painel.
 - **Criar avaliação:** primeiro insere a linha com `photos: {}` e código `GT-${crypto.randomUUID()}`; depois envia as fotos e atualiza a mesma linha. O botão **Voltar e editar** preserva código e identidade, portanto não cria um segundo lead. Se a criação ou o upload falhar, o repository remove os arquivos enviados e pode excluir por até 15 minutos a linha ainda vazia. Não enviar `id`, timestamps, `submitted_by` nem `upgrade_*`.
 - **Upload:** path obrigatório: `<storeId>/<GT-uuid>/<slot>-<uuid>.jpg|jpeg|png|webp`, onde o slot é `front`, `back`, `left`, `right` ou `detail`. O banco exige uma avaliação `Nova` pertencente ao JWT. Cada slot aceita no máximo duas versões simultâneas para permitir substituição com cleanup; JPEG/PNG/WebP têm limite de **6 MiB (6.291.456 bytes)** no envio; a foto escolhida pode ter até 20 MiB, pois é reduzida no aparelho antes de subir. O remetente pode ler/apagar somente objetos cujo `owner_id` seja o próprio usuário. HEIC/HEIF não é aceito.
-- **Validação:** o banco limita descrições, arrays, metadata, valores e payload a 32 KiB; fotos são paths, nunca base64 ou URLs. Estimativas continuam sendo declarações não confiáveis do navegador, não preço aprovado. A validação roda novamente quando o remetente edita o payload.
+- **Validação:** o banco limita descrições, arrays, metadata, valores e payload a 32 KiB; fotos são paths, nunca base64 ou URLs. A estimativa é **recalculada pelo banco** (trigger `calculate_evaluation_values`, com as tabelas `pricing_models` e `pricing_rules`); os valores enviados pelo navegador são descartados. Quando o remetente reenvia sem mudar as respostas, os valores gravados são mantidos. A estimativa continua sendo uma referência, não preço aprovado. A validação roda novamente quando o remetente edita o payload.
 - **Modo local:** avaliações continuam disponíveis no painel local, mas os base64 das fotos nunca são persistidos no `localStorage`. A tela informa essa limitação ao usuário.
 - **Painel:** membros leem somente avaliações/fotos da própria loja; `createSignedUrl` usa a sessão autenticada. Owner/admin/seller atualizam os campos operacionais permitidos; viewer apenas lê. Nenhum membro é provisionado ou promovido pelo frontend.
+
+## Preços e regras
+
+No modo cloud o cálculo oficial roda no banco. Preços e regras são editados no painel, por owner/admin:
+
+- **Aparelhos e preços:** valor-base de cada modelo (`pricing_models`) e acréscimo por capacidade (`pricing_rules.storageBonus`).
+- **Regras de avaliação:** descontos de bateria, estado físico, tela, funções, manutenção e o limite de desconto automático (`pricing_rules`). O trigger `validate_pricing_rules` recusa regras malformadas, que travariam o cálculo.
+- **Produtos para upgrade:** catálogo da tela "Escolha seu próximo iPhone" (`upgrade_products`). O formulário lê os produtos ativos; se a leitura falhar, usa a lista padrão de `calculator.js`.
+
+Seller e viewer só consultam. Rodar o `setup.sql` de novo não sobrescreve valores editados.
+
+`js/evaluation/calculator.js` ainda monta as opções do formulário (modelos, capacidades e respostas) e calcula no modo local. O painel altera só valores; para **adicionar um modelo, capacidade ou opção de resposta**, altere no JS e no banco, senão o envio é recusado.
+
+## Ordem de implantação (Supabase antes do código)
+
+Esta versão do código exige o login anônimo e o `setup.sql` atual. Faça nesta ordem:
+
+1. **Diagnóstico** no SQL Editor: `select policyname, roles from pg_policies where schemaname = 'public' and tablename = 'evaluations';` e `select * from public.store_members;`.
+2. **Backup:** Database → Backups, ou exporte `evaluations` em CSV pelo Table Editor.
+3. **Authentication → Sign In / Providers → Anonymous Sign-Ins:** habilitar.
+4. **SQL Editor:** rodar `supabase/setup.sql` inteiro. Se abortar, nada é aplicado; leia a mensagem.
+5. **Publicar o código** (merge do PR).
+6. **Teste:** enviar uma avaliação; em `evaluations`, a linha deve ter `submitted_by` preenchido e a estimativa calculada.
+7. **Admin:** criar o primeiro owner, se não houver (seção "Instalar o banco", passos 4 e 5).
+
+Se o envio falhar, o formulário oferece ao cliente um botão para mandar a avaliação pelo WhatsApp.
 
 ## Limitações e operação
 

@@ -1,5 +1,6 @@
 import { config } from '../config.js';
 import { safeImageUrl } from '../shared/sanitization.js';
+import { catalog, rules as defaultRules, defaultUpgradeProducts } from '../evaluation/calculator.js';
 
 export const HISTORY_KEY = 'gringasTrocaEvaluationsV55';
 export const statuses = Object.freeze([
@@ -15,6 +16,13 @@ export const statuses = Object.freeze([
 
 const roles = ['owner', 'admin', 'seller', 'viewer'];
 const writableRoles = ['owner', 'admin', 'seller'];
+// Preços, regras e produtos: o banco só aceita escrita de owner/admin.
+export const pricingRoles = Object.freeze(['owner', 'admin']);
+
+// Modo local (desenvolvimento): a configuração comercial fica neste navegador.
+const LOCAL_PRICES_KEY = 'gringasTrocaLocalPrices';
+const LOCAL_RULES_KEY = 'gringasTrocaLocalRules';
+const LOCAL_PRODUCTS_KEY = 'gringasTrocaLocalProducts';
 
 function clone(value) {
   return typeof structuredClone === 'function'
@@ -74,6 +82,37 @@ function recordFromRow(row) {
     } : null,
     cloud: true,
   };
+}
+
+function validAmount(value) {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1000000 &&
+    Number(value.toFixed(2)) === value;
+}
+
+// Mesmas verificações do trigger validate_pricing_rules (supabase/setup.sql).
+function validateRules(value) {
+  const sections = ['storageBonus', 'conditionDiscount', 'screenDiscount', 'issueDiscount'];
+  const tiers = value?.batteryDiscount;
+  const ok = value && typeof value === 'object' &&
+    sections.every(section => value[section] && typeof value[section] === 'object' &&
+      Object.values(value[section]).every(validAmount)) &&
+    Array.isArray(tiers) && tiers.length > 0 &&
+    tiers.every((tier, index) => Number.isInteger(tier?.min) && tier.min >= 0 && tier.min <= 100 &&
+      validAmount(tier.amount) && (index === 0 || tier.min < tiers[index - 1].min)) &&
+    tiers.at(-1).min === 0 &&
+    validAmount(value.repairDiscount) &&
+    typeof value.maximumDiscountRate === 'number' && value.maximumDiscountRate >= 0 && value.maximumDiscountRate <= 1 &&
+    value.manualReasons && typeof value.manualReasons === 'object';
+  if (!ok) throw new Error('Regras inválidas. Use valores entre R$ 0 e R$ 1.000.000 e faixas de bateria em ordem decrescente terminando em 0%.');
+}
+
+function validateProduct(product) {
+  if (!/^[a-z0-9-]{1,40}$/.test(product?.id || '') || product.id === 'undecided' ||
+      typeof product.name !== 'string' || !product.name.trim() || product.name.length > 80 ||
+      typeof product.storage !== 'string' || product.storage.length > 40 ||
+      !validAmount(product.price) || typeof product.active !== 'boolean') {
+    throw new Error('Produto inválido. Informe nome, capacidade (até 40 caracteres) e preço entre R$ 0 e R$ 1.000.000.');
+  }
 }
 
 function validApprovedValue(value) {
@@ -333,6 +372,145 @@ export function createAdminRepository(settings = config, options = {}) {
     return copy;
   }
 
+  function readLocalJson(key, fallback) {
+    try {
+      const value = JSON.parse(storage?.getItem(key) || 'null');
+      return value ?? clone(fallback);
+    } catch {
+      return clone(fallback);
+    }
+  }
+
+  function writeLocalJson(key, value) {
+    if (!storage) throw new Error('Armazenamento local indisponível.');
+    storage.setItem(key, JSON.stringify(value));
+  }
+
+  async function requirePricingWrite() {
+    const membership = await requireMembership();
+    if (!pricingRoles.includes(membership.role)) {
+      throw new Error('Somente owner ou admin podem alterar preços, regras e produtos.');
+    }
+  }
+
+  // Modelos com valor-base e regras do cálculo (pricing_models + pricing_rules).
+  async function getPricing() {
+    if (!configured) {
+      const prices = readLocalJson(LOCAL_PRICES_KEY, {});
+      return {
+        models: catalog.models.map((model, index) => ({
+          model,
+          basePrice: Number(prices[model] ?? catalog.baseByModel[model]),
+          storages: [...catalog.storageByModel[model]],
+          sortOrder: index + 1,
+        })),
+        rules: readLocalJson(LOCAL_RULES_KEY, defaultRules),
+      };
+    }
+    await requireMembership();
+    const [models, rules] = await Promise.all([
+      cloudClient().from('pricing_models').select('model,base_price,storages,sort_order')
+        .eq('store_id', settings.storeId).order('sort_order'),
+      cloudClient().from('pricing_rules').select('rules').eq('store_id', settings.storeId).limit(1),
+    ]);
+    if (models.error) throw models.error;
+    if (rules.error) throw rules.error;
+    const rulesRow = Array.isArray(rules.data) ? rules.data[0] : rules.data;
+    if (!Array.isArray(models.data) || !rulesRow?.rules) {
+      throw new Error('Tabela de preços não encontrada. Rode o supabase/setup.sql atualizado.');
+    }
+    return {
+      models: models.data.map(row => ({
+        model: row.model,
+        basePrice: Number(row.base_price),
+        storages: Array.isArray(row.storages) ? row.storages : [],
+        sortOrder: row.sort_order,
+      })),
+      rules: rulesRow.rules,
+    };
+  }
+
+  // changes: [{ model, basePrice }] — só os modelos alterados.
+  async function saveModelPrices(changes) {
+    if (!Array.isArray(changes) || changes.some(item => typeof item?.model !== 'string' || !validAmount(item.basePrice))) {
+      throw new Error('Preço inválido. Use valores entre R$ 0 e R$ 1.000.000.');
+    }
+    if (!configured) {
+      const prices = readLocalJson(LOCAL_PRICES_KEY, {});
+      for (const { model, basePrice } of changes) prices[model] = basePrice;
+      writeLocalJson(LOCAL_PRICES_KEY, prices);
+      return;
+    }
+    await requirePricingWrite();
+    for (const { model, basePrice } of changes) {
+      const { data, error } = await cloudClient().from('pricing_models')
+        .update({ base_price: basePrice })
+        .eq('store_id', settings.storeId).eq('model', model)
+        .select('model');
+      if (error) throw error;
+      if (!data?.length) throw new Error(`O banco não confirmou o preço de ${model}.`);
+    }
+  }
+
+  async function saveRules(value) {
+    validateRules(value);
+    if (!configured) {
+      writeLocalJson(LOCAL_RULES_KEY, value);
+      return;
+    }
+    await requirePricingWrite();
+    const { data, error } = await cloudClient().from('pricing_rules')
+      .update({ rules: value })
+      .eq('store_id', settings.storeId)
+      .select('store_id');
+    if (error) throw error;
+    if (!data?.length) throw new Error('O banco não confirmou as regras.');
+  }
+
+  async function getUpgradeProducts() {
+    if (!configured) return readLocalJson(LOCAL_PRODUCTS_KEY, defaultUpgradeProducts.map((product, index) => ({ ...product, active: true, sortOrder: index + 1 })));
+    await requireMembership();
+    const { data, error } = await cloudClient().from('upgrade_products')
+      .select('id,name,storage,price,active,sort_order')
+      .eq('store_id', settings.storeId).order('sort_order');
+    if (error) throw error;
+    return (data || []).map(row => ({
+      id: row.id, name: row.name, storage: row.storage, price: Number(row.price),
+      active: Boolean(row.active), sortOrder: row.sort_order,
+    }));
+  }
+
+  // Grava a lista completa: atualiza/insere os presentes e apaga os removidos.
+  async function saveUpgradeProducts(products) {
+    if (!Array.isArray(products) || products.length > 30) throw new Error('Lista de produtos inválida.');
+    products.forEach(validateProduct);
+    if (new Set(products.map(product => product.id)).size !== products.length) {
+      throw new Error('Há produtos repetidos na lista.');
+    }
+    const list = products.map((product, index) => ({ ...product, name: product.name.trim(), sortOrder: index + 1 }));
+    if (!configured) {
+      writeLocalJson(LOCAL_PRODUCTS_KEY, list);
+      return;
+    }
+    await requirePricingWrite();
+    const { data: current, error: readError } = await cloudClient().from('upgrade_products')
+      .select('id').eq('store_id', settings.storeId);
+    if (readError) throw readError;
+    if (list.length) {
+      const { error } = await cloudClient().from('upgrade_products').upsert(list.map(product => ({
+        store_id: settings.storeId, id: product.id, name: product.name, storage: product.storage,
+        price: product.price, active: product.active, sort_order: product.sortOrder,
+      })), { onConflict: 'store_id,id' });
+      if (error) throw error;
+    }
+    const removed = (current || []).map(row => row.id).filter(id => !list.some(product => product.id === id));
+    if (removed.length) {
+      const { error } = await cloudClient().from('upgrade_products').delete()
+        .eq('store_id', settings.storeId).in('id', removed);
+      if (error) throw error;
+    }
+  }
+
   function onAuthStateChange(callback) {
     if (!configured) return () => {};
     const { data } = cloudClient().auth.onAuthStateChange((event, activeSession) => {
@@ -357,6 +535,11 @@ export function createAdminRepository(settings = config, options = {}) {
     saveStoragePrice,
     signedPhotoUrl,
     signPhotos,
+    getPricing,
+    saveModelPrices,
+    saveRules,
+    getUpgradeProducts,
+    saveUpgradeProducts,
     onAuthStateChange,
   };
 }

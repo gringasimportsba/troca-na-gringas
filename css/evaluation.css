@@ -341,6 +341,23 @@ textarea.input { resize: vertical; min-height: 120px; line-height: var(--lh-body
 .btn.ghost:hover { color: var(--c-text); border-color: var(--c-line-strong); }
 .btn.small { min-height: 44px; font-size: var(--fs-xs); }
 
+/* ---- Modal de confirmação (Recomeçar) ---- */
+.confirm-modal {
+  width: min(400px, calc(100% - 2 * var(--gutter)));
+  padding: 0;
+  border: 1px solid var(--c-line-strong);
+  border-radius: var(--r-lg);
+  background: var(--c-surface);
+  color: var(--c-text);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .6);
+}
+.confirm-modal::backdrop { background: rgba(8, 9, 9, .72); backdrop-filter: blur(4px); }
+.confirm-modal__box { display: grid; gap: var(--sp-3); padding: var(--sp-6) var(--sp-5) var(--sp-5); }
+.confirm-modal h2 { margin: 0; font-size: var(--fs-lg); font-weight: var(--fw-heavy); letter-spacing: -.02em; }
+.confirm-modal p { color: var(--c-text-muted); font-size: var(--fs-sm); }
+.confirm-modal__actions { display: flex; gap: var(--sp-3); margin-top: var(--sp-3); }
+.confirm-modal__actions .btn { flex: 1; }
+
 /* ===== CARREGANDO ===== */
 .loader { width: 56px; height: 56px; border-radius: 50%; border: 4px solid var(--c-surface-3); border-top-color: var(--c-gold); animation: spin .8s linear infinite; margin-bottom: var(--sp-3); }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -375,6 +392,9 @@ textarea.input { resize: vertical; min-height: 120px; line-height: var(--lh-body
   font-variant-numeric: tabular-nums;
 }
 .value-sub { color: var(--c-text-muted); font-size: var(--fs-sm); }
+.value-title { margin: var(--sp-2) 0 0; font-size: var(--fs-md); font-weight: var(--fw-bold); }
+.value-callout { margin-top: var(--sp-4); font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+.result-code { word-break: break-all; }
 .value-card.manual { border-color: var(--c-line-strong); background: var(--c-surface); }
 .value-card.manual .value-amount { background: none; color: var(--c-text); }
 .manual-list { margin: var(--sp-4) 0 0; padding: var(--sp-3) var(--sp-4); list-style: none; border-radius: var(--r-md); background: var(--c-surface-2); text-align: left; font-size: var(--fs-xs); color: var(--c-text-muted); }
@@ -398,6 +418,7 @@ textarea.input { resize: vertical; min-height: 120px; line-height: var(--lh-body
 .summary-row dt { color: var(--c-text-muted); }
 .summary-row dd { margin: 0; font-weight: var(--fw-semibold); text-align: right; }
 .summary-notes { padding: var(--sp-3) var(--sp-4); border-top: 1px solid var(--c-line); font-size: var(--fs-sm); }
+.summary-card dl.summary-notes { padding: var(--sp-3) var(--sp-4); }
 .summary-notes dt { color: var(--c-text-muted); margin-bottom: 4px; }
 .summary-notes dd { margin: 0; white-space: pre-wrap; }
 .summary-card .btn { width: calc(100% - var(--sp-8)); margin: var(--sp-3) var(--sp-4) var(--sp-4); }

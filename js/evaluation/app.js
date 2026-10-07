@@ -1,6 +1,6 @@
 import { catalog, rules, calculate, calculateUpgrade } from './calculator.js';
-import { saveEvaluation, saveUpgrade, loadStorageBonuses } from './repository.js';
-import { evaluationWhatsappUrl, upgradeWhatsappUrl } from '../shared/whatsapp.js';
+import { saveEvaluation, saveUpgrade, loadUpgradeProducts } from './repository.js';
+import { evaluationWhatsappUrl, evaluationFallbackWhatsappUrl, upgradeWhatsappUrl } from '../shared/whatsapp.js';
 import * as validation from '../shared/validation.js';
 import * as sanitization from '../shared/sanitization.js';
 
@@ -105,6 +105,38 @@ function maskPhone(value) {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
+// Modal de confirmação no visual da Gringas, no lugar do confirm() do navegador.
+// O <dialog> com showModal() já prende o foco, fecha com Esc e bloqueia o fundo.
+// Resolve true só quando a pessoa escolhe "Recomeçar".
+function confirmarRecomeco(doc) {
+  const Dialog = doc.defaultView?.HTMLDialogElement;
+  if (!Dialog || typeof Dialog.prototype.showModal !== 'function') {
+    return Promise.resolve(globalThis.confirm('Recomeçar a avaliação do início?'));
+  }
+  return new Promise((resolve) => {
+    const dialog = doc.createElement('dialog');
+    dialog.className = 'confirm-modal';
+    dialog.setAttribute('aria-labelledby', 'confirmModalTitle');
+    dialog.setAttribute('aria-describedby', 'confirmModalText');
+    dialog.innerHTML = `
+      <form method="dialog" class="confirm-modal__box">
+        <h2 id="confirmModalTitle">Recomeçar a avaliação?</h2>
+        <p id="confirmModalText">As respostas que você já marcou serão apagadas e a avaliação volta para o início.</p>
+        <div class="confirm-modal__actions">
+          <button type="submit" value="cancel" class="btn ghost small" autofocus>Cancelar</button>
+          <button type="submit" value="ok" class="btn primary small">Recomeçar</button>
+        </div>
+      </form>`;
+    // clique fora da caixa (no fundo escurecido) cancela
+    dialog.addEventListener('click', (event) => { if (event.target === dialog) dialog.close('cancel'); });
+    dialog.addEventListener('close', () => {
+      resolve(dialog.returnValue === 'ok');
+      dialog.remove();
+    }, { once: true });
+    doc.body.append(dialog);
+    dialog.showModal();
+  });
+}
 
 export function mountEvaluationApp({ document = globalThis.document } = {}) {
   const root = document?.getElementById('screen');
@@ -117,6 +149,7 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
   let saving = false;
   let photoLoading = false;
   let closeUpgrade = null;
+  let upgradeProducts = null;
   let currentView = 'wizard';
   let renderedStep = null;
 
@@ -169,6 +202,15 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
     syncNextButton();
   }
 
+  // Se o envio falhar, oferece mandar a avaliação pelo WhatsApp para o lead não se perder.
+  function showWhatsappFallback(calculation) {
+    const actions = root.querySelector('.footer-actions');
+    if (!actions || actions.querySelector('[data-whatsapp-fallback]')) return;
+    let href;
+    try { href = evaluationFallbackWhatsappUrl(state, money(calculation.estimated)); } catch { return; }
+    actions.insertAdjacentHTML('beforeend', `<a class="btn whatsapp" data-whatsapp-fallback href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">ENVIAR AVALIAÇÃO PELO WHATSAPP →</a>`);
+  }
+
   async function next() {
     const stepError = validateStep(state);
     if (stepError) {
@@ -196,8 +238,9 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
     syncNextButton();
     const submit = root.querySelector('[data-next]');
     if (submit) submit.textContent = 'SALVANDO...';
+    let calculation = null;
     try {
-      const calculation = calculate(state, undefined, await loadStorageBonuses());
+      calculation = calculate(state);
       record = await saveEvaluation(state, calculation, record);
       saving = false;
       state.evaluationId = record.id;
@@ -209,6 +252,7 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
       saving = false;
       if (submit) submit.textContent = 'CALCULAR MINHA AVALIAÇÃO →';
       showError(root, error.message || 'Não foi possível concluir a avaliação.');
+      if (calculation) showWhatsappFallback(calculation);
       syncNextButton();
     }
   }
@@ -437,63 +481,50 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
         ? '<div class="note">A avaliação foi atualizada, mas uma foto substituída não pôde ser removida. Avise a equipe se o problema persistir.</div>'
         : '';
 
-    root.innerHTML = `<section class="screen result-screen"><div class="result-kicker">SUA AVALIAÇÃO FICOU PRONTA</div>
-      <div class="result-device"><span class="result-phone-art"></span><div><b>${escapeHtml(record.device.model)}</b><small>${escapeHtml(record.device.storage)}</small></div></div>
+    root.innerHTML = `<section class="screen result-screen">
+      <div class="result-head"><span class="pill">SUA AVALIAÇÃO FICOU PRONTA</span>
+        <div class="result-device"><span class="mini-phone lg" aria-hidden="true"></span><div><b>${escapeHtml(record.device.model)}</b><small>${escapeHtml(record.device.storage)}</small></div></div></div>
       ${calculation.isManual
-        ? `<div class="manual-card"><span>ANÁLISE ESPECIAL</span><h1>Precisamos confirmar alguns detalhes do seu iPhone.</h1><p>A Gringas fará uma análise antes de confirmar o valor. Sua referência inicial é de <b>${money(calculation.estimated)}</b>.</p></div>`
-        : `<div class="value-label">SEU IPHONE PODE VALER ATÉ</div><div class="result-value">${money(calculation.estimated)}</div><div class="value-sub">como entrada na Gringas.</div><div class="result-callout">🔥 Seu próximo iPhone está mais perto.</div>`}
-      <div class="evaluation-code">Avaliação <b>${escapeHtml(record.id)}</b></div>
+        ? `<div class="value-card manual"><span class="value-label">ANÁLISE ESPECIAL</span><p class="value-title">Precisamos confirmar alguns detalhes do seu iPhone.</p><div class="value-amount">${money(calculation.estimated)}</div><p class="value-sub">Sua referência inicial. A Gringas fará uma análise antes de confirmar o valor.</p></div>`
+        : `<div class="value-card"><span class="value-label">SEU IPHONE PODE VALER ATÉ</span><div class="value-amount">${money(calculation.estimated)}</div><p class="value-sub">como entrada na Gringas.</p><p class="value-callout">🔥 Seu próximo iPhone está mais perto.</p></div>`}
       ${persistenceWarning}
-      <div class="demo-warning">⚠️ Valores demonstrativos para validar o motor. A condição final será confirmada pela Gringas.</div>
-      <div class="summary-card"><h3>Dados complementares</h3>
-        <div class="summary-row"><span>📸 Fotos</span><b>${Object.keys(record.photos || {}).length}</b></div>
-        <div class="summary-row"><span>🍎 Garantia Apple</span><b>${escapeHtml(warrantyLabel)}</b></div>
-        <div class="summary-row"><span>🛡️ AppleCare+</span><b>${escapeHtml(warranty.appleCare || '—')}</b></div>
-        <div class="summary-row"><span>📦 Acompanha</span><b>${escapeHtml(record.accessories.join(', ') || 'Somente aparelho')}</b></div>
-        <div class="summary-notes"><span>📝 Observações</span><p>${escapeHtml(record.notes || 'Nenhuma observação.')}</p></div>
-      </div>
-      <div class="footer-actions result-actions"><button type="button" class="btn primary gold" id="upgrade">QUERO FAZER MEU UPGRADE →</button>
-        <button type="button" class="btn ghost" id="diagnostic">VER DIAGNÓSTICO DO CÁLCULO</button>
-        <button type="button" class="btn ghost" id="edit">VOLTAR E EDITAR</button>
+      <div class="result-actions"><button type="button" class="btn primary" id="upgrade">QUERO FAZER MEU UPGRADE →</button>
         <a class="btn whatsapp" href="${escapeHtml(whatsappHref)}" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">FALAR COM A GRINGAS →</a></div>
-      <p class="legal">Valor estimado com base nas informações fornecidas. O WhatsApp abre somente ao clicar e a mensagem não inclui links das fotos.</p></section>`;
+      <details class="summary-card"><summary><span>Dados complementares</span><span class="chev" aria-hidden="true"></span></summary>
+        <dl><div class="summary-row"><dt>📸 Fotos</dt><dd>${Object.keys(record.photos || {}).length}</dd></div>
+          <div class="summary-row"><dt>🍎 Garantia Apple</dt><dd>${escapeHtml(warrantyLabel)}</dd></div>
+          <div class="summary-row"><dt>🛡️ AppleCare+</dt><dd>${escapeHtml(warranty.appleCare || '—')}</dd></div>
+          <div class="summary-row"><dt>📦 Acompanha</dt><dd>${escapeHtml(record.accessories.join(', ') || 'Somente aparelho')}</dd></div></dl>
+        <dl class="summary-notes"><dt>📝 Observações</dt><dd>${escapeHtml(record.notes || 'Nenhuma observação.')}</dd></dl>
+        <button type="button" class="btn ghost small" id="edit">VOLTAR E EDITAR</button></details>
+      <p class="note">⚠️ Valores demonstrativos para validar o motor. A condição final será confirmada pela Gringas.</p>
+      <p class="legal">Avaliação <span class="result-code">${escapeHtml(record.id)}</span><br>Valor estimado com base nas informações fornecidas. O WhatsApp abre somente ao clicar e a mensagem não inclui links das fotos.</p></section>`;
 
     root.querySelector('#edit').addEventListener('click', () => {
       state.step = 11;
       pushNavigation('wizard', 11);
       render();
     });
-    root.querySelector('#diagnostic').addEventListener('click', renderDiagnostic);
     root.querySelector('#upgrade').addEventListener('click', showUpgrade);
   }
 
-  function renderDiagnostic() {
-    const calculation = record.calculation;
-    root.innerHTML = `<section class="screen"><span class="pill">DIAGNÓSTICO 5.6</span>
-      <h1 class="question">Como o sistema chegou ao valor.</h1><p class="sub">Confira os critérios usados na estimativa.</p>
-      <div class="calc-card"><div class="calc-row"><span>Valor-base demonstrativo</span><b>${money(calculation.base)}</b></div>
-        ${calculation.lines.length ? calculation.lines.map(line => `<div class="calc-row deduction"><span>${escapeHtml(line.label)}</span><b>− ${money(line.amount)}</b></div>`).join('') : '<div class="calc-row"><span>Descontos automáticos</span><b>R$ 0</b></div>'}
-        <div class="calc-row"><span>Total calculado</span><b>${money(calculation.totalDiscount)}</b></div>
-        <div class="calc-row"><span>Limite aplicado (30%)</span><b>${money(calculation.cap)}</b></div>
-        <div class="calc-row total"><span>Estimativa</span><b>${money(calculation.estimated)}</b></div></div>
-      ${calculation.isManual
-        ? `<div class="manual-reasons"><b>Encaminhado para análise manual porque:</b>${calculation.manual.map(reason => `<span>• ${escapeHtml(reason)}</span>`).join('')}</div>`
-        : '<div class="success-note">✓ Nenhuma regra de análise manual foi acionada.</div>'}
-      <div class="footer-actions"><button type="button" class="btn primary" id="backResult">VOLTAR AO RESULTADO →</button></div></section>`;
-    root.querySelector('#backResult').addEventListener('click', renderResult);
-  }
-
-  function showUpgrade({ push = true } = {}) {
+  async function showUpgrade({ push = true } = {}) {
     currentView = 'upgrade';
     if (push) pushNavigation('upgrade', 12);
-    let selected = record.upgrade?.productId || '';
+    if (!upgradeProducts) {
+      root.innerHTML = '<section class="screen upgrade-screen"><span class="pill">SEU UPGRADE</span><p class="sub">Carregando os iPhones disponíveis...</p></section>';
+      upgradeProducts = await loadUpgradeProducts();
+      if (currentView !== 'upgrade') return;
+    }
+    const products = upgradeProducts;
+    let selected = products.some(product => product.id === record.upgrade?.productId) ? record.upgrade.productId : '';
 
     const draw = () => {
-      const value = selected ? calculateUpgrade(selected, record.calculation.estimated) : null;
+      const value = selected ? calculateUpgrade(selected, record.calculation.estimated, products) : null;
       root.innerHTML = `<section class="screen upgrade-screen"><span class="pill">SEU UPGRADE</span>
         <h1 class="question">Escolha seu próximo iPhone.</h1>
         <div class="screen-body"><div class="credit-chip"><span>Crédito do seu ${escapeHtml(record.device.model)}</span><b>${money(record.calculation.estimated)}</b></div>
-        <div class="products">${catalog.upgradeProducts.map(product => `<button type="button" class="product${selected === product.id ? ' selected' : ''}" data-product="${escapeHtml(product.id)}" aria-pressed="${selected === product.id}">
+        <div class="products">${products.map(product => `<button type="button" class="product${selected === product.id ? ' selected' : ''}" data-product="${escapeHtml(product.id)}" aria-pressed="${selected === product.id}">
           <span class="mini-phone" aria-hidden="true"></span><div class="product-info"><strong>${escapeHtml(product.name)}</strong><small>${product.price === null ? 'A equipe ajuda você a escolher' : `${escapeHtml(product.storage)} • ${money(product.price)}`}</small></div>
           ${product.price === null ? '' : `<div class="product-diff"><small>${Math.max(0, product.price - record.calculation.estimated) ? 'você completa' : 'seu crédito'}</small><b>${Math.max(0, product.price - record.calculation.estimated) ? money(Math.max(0, product.price - record.calculation.estimated)) : 'cobre tudo'}</b></div>`}<span class="radio" aria-hidden="true"></span></button>`).join('')}</div>
         ${value ? `<div class="deal-card" aria-live="polite">${value.price === null ? `<p class="deal-help">Sem problema! A equipe da Gringas ajuda você a escolher.</p>` : `<div class="deal-row"><span>${escapeHtml(value.productName)} ${escapeHtml(value.storage)}</span><b>${money(value.price)}</b></div><div class="deal-row credit"><span>Seu iPhone como entrada</span><b>− ${money(Math.min(value.tradeValue, value.price))}</b></div><div class="deal-total"><span class="value-label">${value.difference > 0 ? 'VOCÊ COMPLETA' : 'SALDO ESTIMADO'}</span><div class="deal-amount">${money(value.difference > 0 ? value.difference : value.creditOver)}</div>${value.difference > 0 ? `<div class="deal-installment">ou em até <b>12x de ${installment(value.installment)}</b>*</div>` : ''}</div>`}</div>` : ''}</div>
@@ -511,7 +542,7 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
       const control = root.querySelector('#confirmUpgrade');
       control.disabled = true;
       try {
-        record = await saveUpgrade(record, selected);
+        record = await saveUpgrade(record, selected, products);
         const value = record.upgrade;
         const whatsappHref = upgradeWhatsappUrl(
           record,
@@ -530,6 +561,12 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
   }
 
   function render() {
+    // Voltar no navegador para o resultado/upgrade depois de recomeçar: não há
+    // avaliação para mostrar, então volta para a última etapa do formulário.
+    if (!record && (state.step > TOTAL_STEPS || currentView !== 'wizard')) {
+      currentView = 'wizard';
+      state.step = Math.min(state.step, TOTAL_STEPS);
+    }
     if (back) back.classList.toggle('hidden', state.step === 1);
     document.body.dataset.view = currentView;
     if (currentView === 'upgrade' && record) {
@@ -558,8 +595,14 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
   });
 
   if (back) back.addEventListener('click', () => globalThis.history.back());
-  restart?.addEventListener('click', () => {
-    if (state.step > 1 && currentView === 'wizard' && !globalThis.confirm('Recomeçar a avaliação do início?')) return;
+  let confirmingRestart = false;
+  restart?.addEventListener('click', async () => {
+    if (confirmingRestart) return;
+    if (state.step > 1 && currentView === 'wizard') {
+      confirmingRestart = true;
+      const confirmed = await confirmarRecomeco(document).finally(() => { confirmingRestart = false; });
+      if (!confirmed) return;
+    }
     reset();
   });
   pushNavigation('wizard', 1, { replace: true });
