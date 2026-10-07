@@ -292,8 +292,11 @@ async function renderPrices() {
       <div class="config-info"><b>${escapeHtml(item.model)}</b><small>${item.storages.length} memórias (${escapeHtml(item.storages.join(', '))}) • <span data-range>${storageRange(item, rules)}</span></small></div>
       ${amountInput(`data-price="${escapeHtml(item.model)}"`, item.basePrice, `Valor-base do ${item.model}`)}
       <details style="flex:1 1 100%;grid-column:1/-1;width:100%;margin-top:8px"><summary style="cursor:pointer;font-size:13px">Acréscimo deste modelo<span data-mbtag></span></summary>${modelBonusRows(item)}</details></div>`).join('')}</div></div>
-    <div class="panel"><div class="panel-head"><div><h2>Acréscimo por capacidade (padrão)</h2><p>Vale para todos os modelos, exceto onde o modelo tem um acréscimo próprio (veja na tabela acima).</p></div></div>
-      <div class="config-list">${storages.map(storage => `<div class="config-row"><div class="config-info"><b>${escapeHtml(storage)}</b></div>${amountInput(`data-bonus="${escapeHtml(storage)}"`, rules.storageBonus[storage], `Acréscimo padrão para ${storage}`)}</div>`).join('')}</div></div>
+    <div class="panel"><div class="panel-head"><div><h2>Acréscimo por capacidade (padrão)</h2><p><b>Atenção:</b> isto muda o valor em TODOS os modelos que não têm um acréscimo próprio (veja "Acréscimo deste modelo" na tabela acima). Não é o valor de um iPhone específico.</p></div></div>
+      <div class="config-list">
+        ${canEditPricing() ? `<label class="config-row" style="cursor:pointer"><input type="checkbox" id="unlockBonus"><span>Quero alterar o padrão para todos os modelos sem acréscimo próprio</span></label>` : ''}
+        ${storages.map(storage => `<div class="config-row"><div class="config-info"><b>${escapeHtml(storage)}</b></div>${amountInput(`data-bonus="${escapeHtml(storage)}" disabled`, rules.storageBonus[storage], `Acréscimo padrão para ${storage}`)}</div>`).join('')}
+      </div></div>
     ${saveBar('savePrices', 'SALVAR PREÇOS')}`;
 
   const priceInputs = [...document.querySelectorAll('[data-price]')];
@@ -386,6 +389,10 @@ async function renderPrices() {
     };
   });
   updateRanges();
+  const unlockBonus = document.getElementById('unlockBonus');
+  if (unlockBonus) {
+    unlockBonus.onchange = () => bonusInputs.forEach(input => { input.disabled = !unlockBonus.checked; });
+  }
   $('#priceSearch').oninput = event => { search = event.target.value; applyFilter(); };
   document.querySelectorAll('[data-family]').forEach(chip => { chip.onclick = () => { family = chip.dataset.family; applyFilter(); }; });
 }
