@@ -22,6 +22,7 @@ export const pricingRoles = Object.freeze(['owner', 'admin']);
 // Modo local (desenvolvimento): a configuração comercial fica neste navegador.
 const LOCAL_PRICES_KEY = 'gringasTrocaLocalPrices';
 const LOCAL_RULES_KEY = 'gringasTrocaLocalRules';
+const LOCAL_MODEL_BONUS_KEY = 'gringasTrocaLocalModelBonus';
 const LOCAL_PRODUCTS_KEY = 'gringasTrocaLocalProducts';
 
 function clone(value) {
@@ -87,6 +88,12 @@ function recordFromRow(row) {
 function validAmount(value) {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1000000 &&
     Number(value.toFixed(2)) === value;
+}
+
+// Acréscimos próprios de um modelo: { '512 GB': 400 }. Mesma regra do trigger validate_pricing_model_bonus.
+function validBonusMap(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) &&
+    Object.values(value).every(validAmount);
 }
 
 // Mesmas verificações do trigger validate_pricing_rules (supabase/setup.sql).
@@ -315,37 +322,6 @@ export function createAdminRepository(settings = config, options = {}) {
     return recordFromRow(updated);
   }
 
-  async function getStoragePrices() {
-    if (!configured) return [];
-    await requireMembership();
-    const { data, error } = await cloudClient()
-      .from('device_storage_prices')
-      .select('model,storage,bonus')
-      .eq('store_id', settings.storeId);
-    if (error) throw error;
-    return Array.isArray(data) ? data : [];
-  }
-
-  async function saveStoragePrice(model, storage, bonus) {
-    const value = Number(bonus);
-    if (!model || !storage || bonus === '' || bonus === null || !Number.isFinite(value) ||
-        value < 0 || value > 1000000 || Number(value.toFixed(2)) !== value) {
-      throw new Error('Valor inválido: use até duas casas decimais.');
-    }
-    if (!configured) throw new Error('Preços só podem ser salvos com o Supabase configurado.');
-    const membership = await requireMembership(true);
-    if (!['owner', 'admin'].includes(membership.role)) {
-      throw new Error('Somente owner ou admin altera preços.');
-    }
-    const { error } = await cloudClient()
-      .from('device_storage_prices')
-      .upsert(
-        { store_id: settings.storeId, model, storage, bonus: value, updated_at: new Date().toISOString() },
-        { onConflict: 'store_id,model,storage' }
-      );
-    if (error) throw error;
-  }
-
   async function signedPhotoUrl(path, expiresIn = 300) {
     if (!configured) return safeImageUrl(typeof path === 'object' ? path?.data || path?.url : path, settings);
     await requireMembership();
@@ -402,6 +378,7 @@ export function createAdminRepository(settings = config, options = {}) {
           model,
           basePrice: Number(prices[model] ?? catalog.baseByModel[model]),
           storages: [...catalog.storageByModel[model]],
+          storageBonus: readLocalJson(LOCAL_MODEL_BONUS_KEY, {})[model] || {},
           sortOrder: index + 1,
         })),
         rules: readLocalJson(LOCAL_RULES_KEY, defaultRules),
@@ -409,7 +386,7 @@ export function createAdminRepository(settings = config, options = {}) {
     }
     await requireMembership();
     const [models, rules] = await Promise.all([
-      cloudClient().from('pricing_models').select('model,base_price,storages,sort_order')
+      cloudClient().from('pricing_models').select('model,base_price,storages,sort_order,storage_bonus')
         .eq('store_id', settings.storeId).order('sort_order'),
       cloudClient().from('pricing_rules').select('rules').eq('store_id', settings.storeId).limit(1),
     ]);
@@ -424,6 +401,7 @@ export function createAdminRepository(settings = config, options = {}) {
         model: row.model,
         basePrice: Number(row.base_price),
         storages: Array.isArray(row.storages) ? row.storages : [],
+        storageBonus: row.storage_bonus && typeof row.storage_bonus === 'object' ? row.storage_bonus : {},
         sortOrder: row.sort_order,
       })),
       rules: rulesRow.rules,
@@ -449,6 +427,30 @@ export function createAdminRepository(settings = config, options = {}) {
         .select('model');
       if (error) throw error;
       if (!data?.length) throw new Error(`O banco não confirmou o preço de ${model}.`);
+    }
+  }
+
+  // changes: [{ model, storageBonus: { '512 GB': 400 } }] — substitui os acréscimos próprios do
+  // modelo; capacidades ausentes voltam a usar o padrão das regras.
+  async function saveModelStorageBonus(changes) {
+    if (!Array.isArray(changes) ||
+        changes.some(item => typeof item?.model !== 'string' || !validBonusMap(item.storageBonus))) {
+      throw new Error('Acréscimo inválido. Use valores entre R$ 0 e R$ 1.000.000.');
+    }
+    if (!configured) {
+      const all = readLocalJson(LOCAL_MODEL_BONUS_KEY, {});
+      for (const { model, storageBonus } of changes) all[model] = storageBonus;
+      writeLocalJson(LOCAL_MODEL_BONUS_KEY, all);
+      return;
+    }
+    await requirePricingWrite();
+    for (const { model, storageBonus } of changes) {
+      const { data, error } = await cloudClient().from('pricing_models')
+        .update({ storage_bonus: storageBonus })
+        .eq('store_id', settings.storeId).eq('model', model)
+        .select('model');
+      if (error) throw error;
+      if (!data?.length) throw new Error(`O banco não confirmou o acréscimo de ${model}.`);
     }
   }
 
@@ -531,12 +533,11 @@ export function createAdminRepository(settings = config, options = {}) {
     signOut,
     getEvaluations,
     updateEvaluationOps,
-    getStoragePrices,
-    saveStoragePrice,
     signedPhotoUrl,
     signPhotos,
     getPricing,
     saveModelPrices,
+    saveModelStorageBonus,
     saveRules,
     getUpgradeProducts,
     saveUpgradeProducts,
