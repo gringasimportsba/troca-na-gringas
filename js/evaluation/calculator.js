@@ -88,6 +88,7 @@ export const rules = Object.freeze({
   ]),
   repairDiscount: 100,
   maximumDiscountRate: 0.30,
+  installmentFeeRate: 0.13,
 });
 
 function batteryPenalty(value) {
@@ -161,6 +162,6 @@ export function calculateUpgrade(productId, tradeValue, products = catalog.upgra
     tradeValue,
     difference,
     creditOver: product.price === null ? null : Math.max(0, tradeValue - product.price),
-    installment: difference === null ? null : difference / 12,
+    installment: difference === null ? null : (difference * (1 + rules.installmentFeeRate)) / 12,
   };
 }
