@@ -1,5 +1,6 @@
 import repository, { statuses } from './repository.js';
 import { escapeHtml, safeImageUrl } from '../shared/sanitization.js';
+import { catalog, rules } from '../evaluation/calculator.js';
 
 let currentView = 'overview';
 let query = '';
@@ -161,6 +162,57 @@ function renderConfiguration(title) {
   $('#content').innerHTML = '<div class="panel"><div class="empty"><b>Área demonstrativa.</b>Preços, regras e produtos não são persistidos nem aplicados ao motor nesta versão. Configure-os somente quando houver uma fonte comercial oficial.</div></div>';
 }
 
+async function renderPrices() {
+  setTitles('Aparelhos e preços', 'Adicional por capacidade, separado por modelo.');
+  const content = $('#content');
+  content.innerHTML = '<div class="panel"><div class="empty"><b>Carregando...</b></div></div>';
+  let saved;
+  try {
+    saved = await repository.getStoragePrices();
+  } catch (error) {
+    content.innerHTML = `<div class="panel"><div class="empty"><b>Não foi possível carregar.</b>${escapeHtml(error?.message || '')}</div></div>`;
+    return;
+  }
+  const bonuses = {};
+  for (const row of saved) (bonuses[row.model] ??= {})[row.storage] = Number(row.bonus);
+  let model = catalog.models[0];
+
+  const draw = () => {
+    const rows = (catalog.storageByModel[model] || []).map(storage => {
+      const custom = bonuses[model]?.[storage];
+      const value = custom ?? rules.storageBonus[storage] ?? 0;
+      return `<div class="ops" style="margin-bottom:12px">
+        <label for="b-${escapeHtml(storage)}">${escapeHtml(storage)} ${custom === undefined ? '(padrão)' : '(personalizado)'}</label>
+        <input id="b-${escapeHtml(storage)}" type="number" min="0" max="1000000" step="0.01" value="${escapeHtml(value)}">
+        <button class="primary gold" data-save="${escapeHtml(storage)}">SALVAR ${escapeHtml(model)} ${escapeHtml(storage)}</button>
+      </div>`;
+    }).join('');
+    content.innerHTML = `<div class="panel"><div class="panel-head"><div><h2>Adicional por capacidade</h2><p>O valor salvo vale somente para o modelo selecionado.</p></div>
+      <div class="toolbar"><select class="filter" id="priceModel" aria-label="Modelo" style="max-width:none">${catalog.models.map(item => `<option${item === model ? ' selected' : ''}>${escapeHtml(item)}</option>`).join('')}</select></div></div>
+      <div style="padding:16px">${rows}<p id="priceMsg" role="alert"></p></div></div>`;
+    $('#priceModel').onchange = event => { model = event.target.value; draw(); };
+    content.querySelectorAll('[data-save]').forEach(button => {
+      button.onclick = async () => {
+        const storage = button.dataset.save;
+        const input = content.querySelector(`#b-${CSS.escape(storage)}`);
+        const message = $('#priceMsg');
+        button.disabled = true;
+        message.textContent = '';
+        try {
+          await repository.saveStoragePrice(model, storage, input.value);
+          (bonuses[model] ??= {})[storage] = Number(input.value);
+          draw();
+          $('#priceMsg').textContent = 'Preço salvo.';
+        } catch (error) {
+          message.textContent = error?.message || 'Não foi possível salvar.';
+          button.disabled = false;
+        }
+      };
+    });
+  };
+  draw();
+}
+
 function hideLogin() {
   document.querySelector('#cloudLogin')?.remove();
 }
@@ -231,7 +283,7 @@ function renderView() {
     overview: renderOverview,
     evaluations: renderEvaluations,
     clients: renderClients,
-    prices: () => renderConfiguration('Aparelhos e preços'),
+    prices: renderPrices,
     rules: () => renderConfiguration('Regras de avaliação'),
     upgrade: () => renderConfiguration('Produtos para upgrade'),
   };

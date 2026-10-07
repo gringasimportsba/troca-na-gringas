@@ -276,6 +276,37 @@ export function createAdminRepository(settings = config, options = {}) {
     return recordFromRow(updated);
   }
 
+  async function getStoragePrices() {
+    if (!configured) return [];
+    await requireMembership();
+    const { data, error } = await cloudClient()
+      .from('device_storage_prices')
+      .select('model,storage,bonus')
+      .eq('store_id', settings.storeId);
+    if (error) throw error;
+    return Array.isArray(data) ? data : [];
+  }
+
+  async function saveStoragePrice(model, storage, bonus) {
+    const value = Number(bonus);
+    if (!model || !storage || bonus === '' || bonus === null || !Number.isFinite(value) ||
+        value < 0 || value > 1000000 || Number(value.toFixed(2)) !== value) {
+      throw new Error('Valor inválido: use até duas casas decimais.');
+    }
+    if (!configured) throw new Error('Preços só podem ser salvos com o Supabase configurado.');
+    const membership = await requireMembership(true);
+    if (!['owner', 'admin'].includes(membership.role)) {
+      throw new Error('Somente owner ou admin altera preços.');
+    }
+    const { error } = await cloudClient()
+      .from('device_storage_prices')
+      .upsert(
+        { store_id: settings.storeId, model, storage, bonus: value, updated_at: new Date().toISOString() },
+        { onConflict: 'store_id,model,storage' }
+      );
+    if (error) throw error;
+  }
+
   async function signedPhotoUrl(path, expiresIn = 300) {
     if (!configured) return safeImageUrl(typeof path === 'object' ? path?.data || path?.url : path, settings);
     await requireMembership();
@@ -322,6 +353,8 @@ export function createAdminRepository(settings = config, options = {}) {
     signOut,
     getEvaluations,
     updateEvaluationOps,
+    getStoragePrices,
+    saveStoragePrice,
     signedPhotoUrl,
     signPhotos,
     onAuthStateChange,

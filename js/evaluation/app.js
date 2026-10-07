@@ -1,5 +1,5 @@
 import { catalog, rules, calculate, calculateUpgrade } from './calculator.js';
-import { saveEvaluation, saveUpgrade } from './repository.js';
+import { saveEvaluation, saveUpgrade, loadStorageBonuses } from './repository.js';
 import { evaluationWhatsappUrl, upgradeWhatsappUrl } from '../shared/whatsapp.js';
 import * as validation from '../shared/validation.js';
 import * as sanitization from '../shared/sanitization.js';
@@ -197,7 +197,7 @@ export function mountEvaluationApp({ document = globalThis.document } = {}) {
     const submit = root.querySelector('[data-next]');
     if (submit) submit.textContent = 'SALVANDO...';
     try {
-      const calculation = calculate(state);
+      const calculation = calculate(state, undefined, await loadStorageBonuses());
       record = await saveEvaluation(state, calculation, record);
       saving = false;
       state.evaluationId = record.id;
