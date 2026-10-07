@@ -264,7 +264,7 @@ async function loadConfig(view, loader) {
 }
 
 function storageRange(model, rules) {
-  const bonuses = model.storages.map(storage => Number(rules.storageBonus?.[storage] ?? 0));
+  const bonuses = model.storages.map(storage => Number(model.storageBonus?.[storage] ?? rules.storageBonus?.[storage] ?? 0));
   const min = model.basePrice + Math.min(...bonuses);
   const max = model.basePrice + Math.max(...bonuses);
   return min === max ? money(min) : `${money(min)} até ${money(max)}`;
@@ -280,24 +280,52 @@ async function renderPrices() {
   let family = 'Todos';
   let search = '';
 
-  $('#content').innerHTML = `${readonlyNote()}<div class="panel"><div class="panel-head"><div><h2>Tabela de preços</h2><p>Estimativa = valor-base + acréscimo da capacidade − descontos das regras de avaliação.</p></div>
+  const modelBonusRows = item => item.storages.map(storage => {
+    const value = item.storageBonus?.[storage] ?? rules.storageBonus?.[storage] ?? 0;
+    return `<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0"><b>${escapeHtml(storage)}</b>${amountInput(`data-mb="${escapeHtml(item.model)}" data-mbs="${escapeHtml(storage)}"`, value, `Acréscimo de ${storage} para ${item.model}`)}</div>`;
+  }).join('');
+
+  $('#content').innerHTML = `${readonlyNote()}<div class="panel"><div class="panel-head"><div><h2>Tabela de preços</h2><p>Estimativa = valor-base + acréscimo da capacidade − descontos das regras de avaliação. Abra "Acréscimo deste modelo" para definir um acréscimo diferente só para aquele iPhone.</p></div>
       <div class="toolbar"><input class="search" id="priceSearch" type="search" placeholder="Buscar modelo..." aria-label="Buscar modelo"></div>
       <div class="chips" role="group" aria-label="Filtrar por geração">${['Todos', ...families].map(name => `<button type="button" class="chip${name === family ? ' active' : ''}" data-family="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join('')}</div></div>
-    <div class="config-list">${models.map(item => `<div class="config-row" data-row="${escapeHtml(item.model)}">
+    <div class="config-list">${models.map(item => `<div class="config-row" data-row="${escapeHtml(item.model)}" style="flex-wrap:wrap">
       <div class="config-info"><b>${escapeHtml(item.model)}</b><small>${item.storages.length} memórias (${escapeHtml(item.storages.join(', '))}) • <span data-range>${storageRange(item, rules)}</span></small></div>
-      ${amountInput(`data-price="${escapeHtml(item.model)}"`, item.basePrice, `Valor-base do ${item.model}`)}</div>`).join('')}</div></div>
-    <div class="panel"><div class="panel-head"><div><h2>Acréscimo por capacidade</h2><p>Somado ao valor-base conforme a memória escolhida pelo cliente.</p></div></div>
-      <div class="config-list">${storages.map(storage => `<div class="config-row"><div class="config-info"><b>${escapeHtml(storage)}</b></div>${amountInput(`data-bonus="${escapeHtml(storage)}"`, rules.storageBonus[storage], `Acréscimo para ${storage}`)}</div>`).join('')}</div></div>
+      ${amountInput(`data-price="${escapeHtml(item.model)}"`, item.basePrice, `Valor-base do ${item.model}`)}
+      <details style="flex:1 1 100%;grid-column:1/-1;width:100%;margin-top:8px"><summary style="cursor:pointer;font-size:13px">Acréscimo deste modelo<span data-mbtag></span></summary>${modelBonusRows(item)}</details></div>`).join('')}</div></div>
+    <div class="panel"><div class="panel-head"><div><h2>Acréscimo por capacidade (padrão)</h2><p>Vale para todos os modelos, exceto onde o modelo tem um acréscimo próprio (veja na tabela acima).</p></div></div>
+      <div class="config-list">${storages.map(storage => `<div class="config-row"><div class="config-info"><b>${escapeHtml(storage)}</b></div>${amountInput(`data-bonus="${escapeHtml(storage)}"`, rules.storageBonus[storage], `Acréscimo padrão para ${storage}`)}</div>`).join('')}</div></div>
     ${saveBar('savePrices', 'SALVAR PREÇOS')}`;
 
   const priceInputs = [...document.querySelectorAll('[data-price]')];
   const bonusInputs = [...document.querySelectorAll('[data-bonus]')];
+  const modelInputs = [...document.querySelectorAll('[data-mb]')];
   const original = new Map(models.map(item => [item.model, item.basePrice]));
+  const originalOverrides = new Map(models.map(item => [item.model, { ...(item.storageBonus || {}) }]));
+  // Entradas que já têm valor próprio (ou foram editadas) não acompanham mais o padrão.
+  modelInputs.forEach(input => {
+    input.dataset.custom = originalOverrides.get(input.dataset.mb)?.[input.dataset.mbs] !== undefined ? '1' : '';
+  });
+
+  const inputsOf = model => modelInputs.filter(input => input.dataset.mb === model);
+  const currentBonus = () => Object.fromEntries(bonusInputs.map(input => [input.dataset.bonus, readAmount(input)]));
+  const bonusChanged = () => storages.some(storage => currentBonus()[storage] !== rules.storageBonus[storage]);
   const changedPrices = () => priceInputs
     .map(input => ({ model: input.dataset.price, basePrice: readAmount(input) }))
     .filter(item => item.basePrice !== original.get(item.model));
-  const currentBonus = () => Object.fromEntries(bonusInputs.map(input => [input.dataset.bonus, readAmount(input)]));
-  const bonusChanged = () => storages.some(storage => currentBonus()[storage] !== rules.storageBonus[storage]);
+  // Só guarda o que difere do padrão atual; o resto continua seguindo o padrão.
+  const overridesFor = model => {
+    const standard = currentBonus();
+    const overrides = {};
+    for (const input of inputsOf(model)) {
+      const value = readAmount(input);
+      if (!Number.isFinite(value) || value !== standard[input.dataset.mbs]) overrides[input.dataset.mbs] = value;
+    }
+    return overrides;
+  };
+  const normalize = object => JSON.stringify(Object.entries(object).sort(([a], [b]) => a.localeCompare(b)));
+  const changedModelBonus = () => models
+    .map(item => ({ model: item.model, storageBonus: overridesFor(item.model) }))
+    .filter(item => normalize(item.storageBonus) !== normalize(originalOverrides.get(item.model)));
 
   const applyFilter = () => {
     const needle = search.trim().toLowerCase();
@@ -311,22 +339,53 @@ async function renderPrices() {
     const bonus = currentBonus();
     for (const item of models) {
       const basePrice = readAmount(priceInputs.find(input => input.dataset.price === item.model));
-      const row = document.querySelector(`[data-row="${CSS.escape(item.model)}"] [data-range]`);
-      if (row && Number.isFinite(basePrice)) row.textContent = storageRange({ ...item, basePrice }, { storageBonus: bonus });
+      const row = document.querySelector(`[data-row="${CSS.escape(item.model)}"]`);
+      if (!row) continue;
+      const overrides = Object.fromEntries(Object.entries(overridesFor(item.model)).filter(([, value]) => Number.isFinite(value)));
+      const tag = row.querySelector('[data-mbtag]');
+      if (tag) tag.textContent = Object.keys(overrides).length ? ' • personalizado' : '';
+      const range = row.querySelector('[data-range]');
+      if (range && Number.isFinite(basePrice)) range.textContent = storageRange({ ...item, basePrice, storageBonus: overrides }, { storageBonus: bonus });
     }
   };
-  const refresh = bindSave('savePrices', () => changedPrices().length > 0 || bonusChanged(), async () => {
+  const refresh = bindSave('savePrices', () => changedPrices().length > 0 || bonusChanged() || changedModelBonus().length > 0, async () => {
     const changes = changedPrices();
     const bonus = currentBonus();
-    if (changes.some(item => !Number.isFinite(item.basePrice)) || Object.values(bonus).some(value => !Number.isFinite(value))) {
+    const modelChanges = changedModelBonus();
+    if (changes.some(item => !Number.isFinite(item.basePrice)) ||
+        Object.values(bonus).some(value => !Number.isFinite(value)) ||
+        modelChanges.some(item => Object.values(item.storageBonus).some(value => !Number.isFinite(value)))) {
       throw new Error('Revise os valores destacados em vermelho.');
     }
     if (changes.length) await repository.saveModelPrices(changes);
     if (bonusChanged()) await repository.saveRules({ ...rules, storageBonus: bonus });
+    if (modelChanges.length) await repository.saveModelStorageBonus(modelChanges);
     changes.forEach(item => original.set(item.model, item.basePrice));
     rules.storageBonus = bonus;
+    modelChanges.forEach(item => originalOverrides.set(item.model, { ...item.storageBonus }));
   });
-  [...priceInputs, ...bonusInputs].forEach(input => { input.oninput = () => { updateRanges(); refresh(); }; });
+
+  priceInputs.forEach(input => { input.oninput = () => { updateRanges(); refresh(); }; });
+  bonusInputs.forEach(input => {
+    input.oninput = () => {
+      // Modelos sem acréscimo próprio acompanham o padrão enquanto você digita.
+      const value = readAmount(input);
+      if (Number.isFinite(value)) {
+        modelInputs.filter(item => item.dataset.mbs === input.dataset.bonus && item.dataset.custom !== '1')
+          .forEach(item => { item.value = value; });
+      }
+      updateRanges();
+      refresh();
+    };
+  });
+  modelInputs.forEach(input => {
+    input.oninput = () => {
+      input.dataset.custom = '1';
+      updateRanges();
+      refresh();
+    };
+  });
+  updateRanges();
   $('#priceSearch').oninput = event => { search = event.target.value; applyFilter(); };
   document.querySelectorAll('[data-family]').forEach(chip => { chip.onclick = () => { family = chip.dataset.family; applyFilter(); }; });
 }

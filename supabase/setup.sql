@@ -436,6 +436,32 @@ on conflict (store_id, model) do nothing;
 insert into public.pricing_rules (store_id, rules) values ('11111111-1111-1111-1111-111111111111', '{"storageBonus":{"64 GB":0,"128 GB":100,"256 GB":250,"512 GB":500,"1 TB":800,"2 TB":1200},"conditionDiscount":{"Excelente":0,"Bom":100,"Regular":300,"Danificado":0},"screenDiscount":{"Sim, perfeitamente":0,"Possui riscos/manchas":180,"Está trincada":0,"Possui problema no touch":0,"Tela já foi substituída":220},"issueDiscount":{"Face ID / Touch ID":0,"Câmeras":350,"Alto-falantes":160,"Microfones":160,"Botões":120,"Wi‑Fi / Bluetooth":300,"Carregamento":250},"manualReasons":{"condition":["Danificado"],"screen":["Está trincada","Possui problema no touch"],"issues":["Face ID / Touch ID"]},"batteryDiscount":[{"min":90,"amount":0},{"min":85,"amount":100},{"min":80,"amount":220},{"min":0,"amount":400}],"repairDiscount":100,"maximumDiscountRate":0.3}'::jsonb)
 on conflict (store_id) do nothing;
 
+-- Acréscimo de capacidade por modelo. Sobrescreve o padrão de pricing_rules.storageBonus
+-- só para o modelo/capacidade informados, ex.: {"512 GB": 400}. Vazio = usa o padrão.
+alter table public.pricing_models add column if not exists storage_bonus jsonb not null default '{}'::jsonb;
+alter table public.pricing_models drop constraint if exists pricing_models_storage_bonus_object;
+alter table public.pricing_models add constraint pricing_models_storage_bonus_object
+  check (jsonb_typeof(storage_bonus) = 'object');
+
+create or replace function public.validate_pricing_model_bonus()
+returns trigger language plpgsql set search_path = '' as $$
+declare item record;
+begin
+  for item in select key, value from jsonb_each(new.storage_bonus) loop
+    if not (item.key = any(new.storages))
+       or jsonb_typeof(item.value) <> 'number'
+       or not ((item.value #>> '{}')::numeric between 0 and 1000000) then
+      raise exception 'invalid storage bonus: %', item.key using errcode = '23514';
+    end if;
+  end loop;
+  return new;
+end;
+$$;
+revoke all on function public.validate_pricing_model_bonus() from public, anon, authenticated;
+drop trigger if exists validate_pricing_model_bonus on public.pricing_models;
+create trigger validate_pricing_model_bonus before insert or update on public.pricing_models
+for each row execute function public.validate_pricing_model_bonus();
+
 -- Mesma lógica de calculate() em js/evaluation/calculator.js. Roda antes dos demais
 -- triggers (ordem alfabética), então validate_evaluation_write confere o resultado.
 create or replace function public.calculate_evaluation_values()
@@ -466,10 +492,12 @@ begin
   select * into model_row from public.pricing_models p
     where p.store_id = new.store_id and p.model = new.device_model;
   if r is null or not found or not (new.device_storage = any(model_row.storages))
-     or not (r->'storageBonus' ? new.device_storage) then
+     or not ((r->'storageBonus' ? new.device_storage) or (model_row.storage_bonus ? new.device_storage)) then
     raise exception 'invalid model or storage for pricing' using errcode = '23514';
   end if;
-  base := model_row.base_price + (r->'storageBonus'->>new.device_storage)::numeric;
+  -- Acréscimo da capacidade: valor próprio do modelo (storage_bonus) ou, sem ele, o padrão das regras.
+  base := model_row.base_price + coalesce((model_row.storage_bonus->>new.device_storage)::numeric,
+                                          (r->'storageBonus'->>new.device_storage)::numeric);
 
   if new.battery is null then
     reasons := reasons || 'Saúde da bateria não informada'::text;
