@@ -419,20 +419,39 @@ insert into public.pricing_models (store_id, model, base_price, storages, sort_o
   ('11111111-1111-1111-1111-111111111111', 'iPhone 13 Pro', 2200, array['128 GB','256 GB','512 GB','1 TB'], 8),
   ('11111111-1111-1111-1111-111111111111', 'iPhone 13 Pro Max', 2500, array['128 GB','256 GB','512 GB','1 TB'], 9),
   ('11111111-1111-1111-1111-111111111111', 'iPhone 14', 2250, array['128 GB','256 GB','512 GB'], 10),
-  ('11111111-1111-1111-1111-111111111111', 'iPhone 14 Pro', 2850, array['128 GB','256 GB','512 GB','1 TB'], 11),
-  ('11111111-1111-1111-1111-111111111111', 'iPhone 14 Pro Max', 3250, array['128 GB','256 GB','512 GB','1 TB'], 12),
-  ('11111111-1111-1111-1111-111111111111', 'iPhone 15', 2800, array['128 GB','256 GB','512 GB'], 13),
-  ('11111111-1111-1111-1111-111111111111', 'iPhone 15 Pro', 3650, array['128 GB','256 GB','512 GB','1 TB'], 14),
-  ('11111111-1111-1111-1111-111111111111', 'iPhone 15 Pro Max', 4250, array['256 GB','512 GB','1 TB'], 15),
-  ('11111111-1111-1111-1111-111111111111', 'iPhone 16', 3500, array['128 GB','256 GB','512 GB'], 16),
-  ('11111111-1111-1111-1111-111111111111', 'iPhone 16 Pro', 4550, array['128 GB','256 GB','512 GB','1 TB'], 17),
-  ('11111111-1111-1111-1111-111111111111', 'iPhone 16 Pro Max', 5350, array['256 GB','512 GB','1 TB'], 18),
-  ('11111111-1111-1111-1111-111111111111', 'iPhone 17', 4300, array['256 GB','512 GB'], 19),
-  ('11111111-1111-1111-1111-111111111111', 'iPhone 17 Pro', 5700, array['256 GB','512 GB','1 TB'], 20),
-  ('11111111-1111-1111-1111-111111111111', 'iPhone 17 Pro Max', 6500, array['256 GB','512 GB','1 TB','2 TB'], 21),
-  ('11111111-1111-1111-1111-111111111111', 'iPhone 18 Pro', 6900, array['256 GB','512 GB','1 TB'], 22),
-  ('11111111-1111-1111-1111-111111111111', 'iPhone 18 Pro Max', 7800, array['256 GB','512 GB','1 TB','2 TB'], 23)
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 14 Plus', 2500, array['128 GB','256 GB','512 GB','1 TB'], 11),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 14 Pro', 2850, array['128 GB','256 GB','512 GB','1 TB'], 12),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 14 Pro Max', 3250, array['128 GB','256 GB','512 GB','1 TB'], 13),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 15', 2800, array['128 GB','256 GB','512 GB'], 14),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 15 Plus', 3050, array['128 GB','256 GB','512 GB','1 TB'], 15),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 15 Pro', 3650, array['128 GB','256 GB','512 GB','1 TB'], 16),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 15 Pro Max', 4250, array['256 GB','512 GB','1 TB'], 17),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 16', 3500, array['128 GB','256 GB','512 GB'], 18),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 16 Plus', 3850, array['128 GB','256 GB','512 GB','1 TB'], 19),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 16 Pro', 4550, array['128 GB','256 GB','512 GB','1 TB'], 20),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 16 Pro Max', 5350, array['256 GB','512 GB','1 TB'], 21),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 17', 4300, array['256 GB','512 GB'], 22),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone Air', 4800, array['256 GB','512 GB','1 TB'], 23),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 17 Pro', 5700, array['256 GB','512 GB','1 TB'], 24),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 17 Pro Max', 6500, array['256 GB','512 GB','1 TB','2 TB'], 25),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 18 Pro', 6900, array['256 GB','512 GB','1 TB'], 26),
+  ('11111111-1111-1111-1111-111111111111', 'iPhone 18 Pro Max', 7800, array['256 GB','512 GB','1 TB','2 TB'], 27)
 on conflict (store_id, model) do nothing;
+-- Reordena a lista (sort_order é só exibição no painel) para encaixar os modelos acima
+-- entre os que já existiam na loja real antes deles serem adicionados. Não mexe em
+-- base_price/storages/storage_bonus dos modelos já cadastrados.
+update public.pricing_models set sort_order = v.sort_order
+from (values
+  ('iPhone 11', 1), ('iPhone 11 Pro', 2), ('iPhone 11 Pro Max', 3),
+  ('iPhone 12', 4), ('iPhone 12 Pro', 5), ('iPhone 12 Pro Max', 6),
+  ('iPhone 13', 7), ('iPhone 13 Pro', 8), ('iPhone 13 Pro Max', 9),
+  ('iPhone 14', 10), ('iPhone 14 Plus', 11), ('iPhone 14 Pro', 12), ('iPhone 14 Pro Max', 13),
+  ('iPhone 15', 14), ('iPhone 15 Plus', 15), ('iPhone 15 Pro', 16), ('iPhone 15 Pro Max', 17),
+  ('iPhone 16', 18), ('iPhone 16 Plus', 19), ('iPhone 16 Pro', 20), ('iPhone 16 Pro Max', 21),
+  ('iPhone 17', 22), ('iPhone Air', 23), ('iPhone 17 Pro', 24), ('iPhone 17 Pro Max', 25),
+  ('iPhone 18 Pro', 26), ('iPhone 18 Pro Max', 27)
+) as v(model, sort_order)
+where pricing_models.store_id = '11111111-1111-1111-1111-111111111111' and pricing_models.model = v.model;
 insert into public.pricing_rules (store_id, rules) values ('11111111-1111-1111-1111-111111111111', '{"storageBonus":{"64 GB":0,"128 GB":100,"256 GB":250,"512 GB":500,"1 TB":800,"2 TB":1200},"conditionDiscount":{"Excelente":0,"Bom":100,"Regular":300,"Danificado":0},"screenDiscount":{"Sim, perfeitamente":0,"Possui riscos/manchas":180,"Está trincada":0,"Possui problema no touch":0,"Tela já foi substituída":220},"issueDiscount":{"Face ID / Touch ID":0,"Câmeras":350,"Alto-falantes":160,"Microfones":160,"Botões":120,"Wi‑Fi / Bluetooth":300,"Carregamento":250},"manualReasons":{"condition":["Danificado"],"screen":["Está trincada","Possui problema no touch"],"issues":["Face ID / Touch ID"]},"batteryDiscount":[{"min":90,"amount":0},{"min":85,"amount":100},{"min":80,"amount":220},{"min":0,"amount":400}],"repairDiscount":100,"maximumDiscountRate":0.3}'::jsonb)
 on conflict (store_id) do nothing;
 
